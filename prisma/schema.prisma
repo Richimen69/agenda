@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 1. USUARIOS
+model User {
+  id              String     @id @default(uuid())
+  name            String
+  email           String     @unique
+  password        String     @default("123456")// NUEVO: Contraseña encriptada
+  whatsappPhone   String     
+  role            Role       @default(USER) // NUEVO: Rol del usuario
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+
+  createdTickets  Ticket[]   @relation("CreatedTickets")
+  assignedTickets Ticket[]   @relation("AssignedTickets")
+  eventsCreated   Event[]    @relation("EventCreator")
+  eventsAttending Event[]    @relation("EventAttendees")
+  reminders       Reminder[] 
+  auditLogs       AuditLog[]
+  comments        Comment[]
+}
+
+// 2. TICKETS / PROYECTOS
+model Ticket {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  status      Status  @default(NUEVO) // Estado inicial cambiado
+
+  creatorId String
+  creator   User   @relation("CreatedTickets", fields: [creatorId], references: [id])
+
+  assignees User[] @relation("AssignedTickets")
+
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  events    Event[]
+  reminders Reminder[]
+  auditLogs AuditLog[]
+  comments  Comment[] // NUEVO: Relacion con comentarios
+}
+
+// 3. NUEVO: AGENDA COLABORATIVA
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  scheduledAt DateTime // Fecha y hora del evento
+
+  // Quién lo creó
+  creatorId String
+  creator   User   @relation("EventCreator", fields: [creatorId], references: [id])
+
+  // Opcional: ¿Está vinculado a un proyecto/ticket?
+  ticketId String?
+  ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  // Invitados al evento (Relación implícita muchos-a-muchos de Prisma)
+  attendees User[] @relation("EventAttendees")
+
+  reminders Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 4. RECORDATORIOS (Nuestra Cola Universal para WhatsApp)
+model Reminder {
+  id String @id @default(uuid())
+
+  // ¿A quién le vamos a enviar el WhatsApp? (Crucial para eventos grupales)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Contexto (Puede venir de un Ticket, de un Evento, o de ambos)
+  ticketId String?
+  ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  scheduledAt    DateTime // Cuándo debe enviarse el WhatsApp
+  messagePayload String   @db.Text // El texto exacto a enviar
+
+  // Banderas de control para el Worker
+  status     ReminderStatus @default(PENDING)
+  retryCount Int            @default(0)
+  errorLog   String?        @db.Text
+
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([status, scheduledAt])
+}
+
+model Comment {
+  id   String @id @default(uuid())
+  text String @db.Text
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// 5. BITÁCORA
+model AuditLog {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+}
+
+enum Status {
+  NUEVO
+  EN_PROGRESO
+  REVISION
+  COMPLETADO
+}
+
+enum ReminderStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+enum Role {
+  ADMIN
+  USER
+}
