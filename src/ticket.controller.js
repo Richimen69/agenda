@@ -2,18 +2,34 @@ import prisma from "./prisma.js";
 
 export const createTicket = async (req, res) => {
   try {
-    const { title, description, creatorId, assigneeIds, dueDate } = req.body;
+    const {
+      title,
+      description,
+      creatorId,
+      assigneeIds,
+      dueDate,
+      priority,
+      subtasks,
+    } = req.body;
 
     const newTicket = await prisma.ticket.create({
       data: {
         title,
         description,
+        priority: priority ?? "MEDIA",
         creatorId,
         dueDate: dueDate ? new Date(dueDate) : null,
-        // Conectamos multiples usuarios asignados
-        assignees: {
-          connect: assigneeIds.map((id) => ({ id })),
-        },
+        assignees: { connect: assigneeIds.map((id) => ({ id })) },
+        // Actualizado para recibir el assigneeId en cada subtarea
+        subtasks:
+          subtasks && subtasks.length > 0
+            ? {
+                create: subtasks.map((task) => ({
+                  title: task.title,
+                  assigneeId: task.assigneeId || null,
+                })),
+              }
+            : undefined,
         auditLogs: {
           create: {
             userId: creatorId,
@@ -22,10 +38,93 @@ export const createTicket = async (req, res) => {
           },
         },
       },
-      include: { creator: true, assignees: true },
+      include: { creator: true, assignees: true, subtasks: true },
     });
 
     res.status(201).json({ success: true, data: newTicket });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const addSubtask = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, assigneeId } = req.body; // Ahora recibimos a quién le toca
+
+    const subtask = await prisma.subtask.create({
+      data: { title, ticketId: id, assigneeId: assigneeId || null },
+      include: { assignee: { select: { name: true } } },
+    });
+    res.json({ success: true, data: subtask });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const toggleSubtask = async (req, res) => {
+  try {
+    const { subtaskId } = req.params;
+    const { isDone, userId } = req.body; // Recibimos quién intenta marcarla
+
+    const subtask = await prisma.subtask.findUnique({
+      where: { id: subtaskId },
+      include: { ticket: true },
+    });
+
+    if (!subtask)
+      return res
+        .status(404)
+        .json({ success: false, error: "Subtarea no encontrada" });
+
+    // REGLA DE SEGURIDAD: Si la subtarea tiene un asignado, solo él o el creador del proyecto pueden marcarla
+    if (
+      subtask.assigneeId &&
+      subtask.assigneeId !== userId &&
+      subtask.ticket.creatorId !== userId
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: "Solo el responsable de esta subtarea puede completarla.",
+      });
+    }
+
+    const updated = await prisma.subtask.update({
+      where: { id: subtaskId },
+      data: { isDone },
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const deleteSubtask = async (req, res) => {
+  try {
+    const { subtaskId } = req.params;
+    const { userId } = req.body; // Quien intenta borrar
+
+    // Buscamos la subtarea y su proyecto padre
+    const subtask = await prisma.subtask.findUnique({
+      where: { id: subtaskId },
+      include: { ticket: true },
+    });
+
+    if (!subtask)
+      return res
+        .status(404)
+        .json({ success: false, error: "Subtarea no encontrada" });
+
+    // Validacion de seguridad
+    if (subtask.ticket.creatorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: "Solo el creador del proyecto puede borrar subtareas.",
+      });
+    }
+
+    await prisma.subtask.delete({ where: { id: subtaskId } });
+    res.json({ success: true, message: "Subtarea eliminada" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -58,11 +157,40 @@ export const updateTicketStatus = async (req, res) => {
   }
 };
 
+export const updateTicketPriority = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority, userId } = req.body;
+
+    const oldTicket = await prisma.ticket.findUnique({ where: { id } });
+
+    const updatedTicket = await prisma.ticket.update({
+      where: { id },
+      data: {
+        priority,
+        auditLogs: {
+          create: {
+            userId,
+            action: "PRIORITY_CHANGED",
+            details: {
+              old_priority: oldTicket.priority,
+              new_priority: priority,
+            },
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, data: updatedTicket });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 export const getTickets = async (req, res) => {
   try {
-    const { userId } = req.query; // Recibimos el ID del usuario logueado
+    const { userId } = req.query;
 
-    // Filtro: Traer tickets donde el usuario sea el creador O este en la lista de asignados
     const whereClause = userId
       ? {
           OR: [{ creatorId: userId }, { assignees: { some: { id: userId } } }],
@@ -74,6 +202,10 @@ export const getTickets = async (req, res) => {
       include: {
         creator: { select: { name: true } },
         assignees: { select: { id: true, name: true } },
+
+        // ---> ESTA ES LA LÍNEA MÁGICA QUE FALTA <---
+        subtasks: { orderBy: { createdAt: "asc" } },
+
         comments: {
           include: { user: { select: { name: true } } },
           orderBy: { createdAt: "asc" },
@@ -143,6 +275,66 @@ export const addComment = async (req, res) => {
         comments: { include: { user: true } },
         assignees: true,
       },
+    });
+
+    res.json({ success: true, data: updatedTicket });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+export const deleteTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body; // Recibimos quién intenta borrarlo
+
+    // 1. Buscamos el proyecto
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Proyecto no encontrado" });
+    }
+
+    // 2. REGLA DE NEGOCIO: Solo el creador puede borrarlo
+    if (ticket.creatorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error:
+          "No tienes permiso para borrar este proyecto. Solo el creador puede hacerlo.",
+      });
+    }
+
+    // 3. Si pasa la validación, lo borramos
+    await prisma.ticket.delete({ where: { id } });
+    res.json({ success: true, message: "Proyecto eliminado correctamente" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+export const updateTicketAssignees = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { assigneeIds, userId } = req.body;
+
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+
+    // REGLA: Solo el creador puede meter o sacar gente del proyecto
+    if (ticket.creatorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: "Solo el creador del proyecto puede modificar el equipo.",
+      });
+    }
+
+    const updatedTicket = await prisma.ticket.update({
+      where: { id },
+      data: {
+        assignees: {
+          set: assigneeIds.map((id) => ({ id })), // 'set' reemplaza la lista actual con la nueva
+        },
+      },
+      include: { assignees: true },
     });
 
     res.json({ success: true, data: updatedTicket });

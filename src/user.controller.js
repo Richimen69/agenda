@@ -42,6 +42,7 @@ export const createUser = async (req, res) => {
     const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json({ success: true, data: userWithoutPassword });
   } catch (error) {
+     console.error("ERROR REAL AL CREAR USUARIO:", error);
     res.status(500).json({ success: false, error: 'El correo ya existe o los datos son inválidos' });
   }
 };
@@ -66,5 +67,25 @@ export const deleteUser = async (req, res) => {
     res.json({ success: true, message: 'Usuario eliminado' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'No se puede borrar un usuario que tiene proyectos asignados' });
+  }
+};
+// BORRADO FÍSICO (Hard Delete - Solo para uso desde Postman)
+export const hardDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await prisma.user.delete({ 
+      where: { id } 
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Usuario borrado DEFINITIVAMENTE de la base de datos' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'No se puede borrar físicamente porque el usuario ya creó proyectos o eventos. Debes borrar sus proyectos primero. Detalle: ' + error.message 
+    });
   }
 };

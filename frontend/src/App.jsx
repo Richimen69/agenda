@@ -62,8 +62,12 @@ export default function App() {
               <TicketDetailPage
                 tickets={tickets}
                 authUser={authUser}
+                users={users}
                 onStatusChange={handleStatusChange}
                 onAddComment={handleAddComment}
+                onDelete={fetchData}
+                onUpdate={fetchData}
+                fetchData={fetchData}
               />
             }
           />
