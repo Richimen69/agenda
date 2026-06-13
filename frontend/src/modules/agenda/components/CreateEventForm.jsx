@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createTicket } from "../services/api";
+import { createTicket } from "../../../services/api";
 
 export default function CreateTicketForm({
   users,

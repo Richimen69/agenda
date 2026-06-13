@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, Bookmark, Edit2, Calendar, Send, Trash2, Plus, Users, CheckSquare, Square, X } from 'lucide-react';
 import { ArrowDown, Minus, ArrowUp, AlertTriangle } from 'lucide-react';
-import { addSubtask, toggleSubtask, deleteSubtask, updateTicketAssignees } from '../services/api';
-import { PRIORITY_CONFIG } from '../utils/constants';
-import DeleteConfirmModal from './DeleteConfirmModal';
+import { addSubtask, toggleSubtask, deleteSubtask, updateTicketAssignees } from '../../../services/api';
+import { PRIORITY_CONFIG } from '../../../utils/constants';
+import DeleteConfirmModal from '@modules/proyectos/components/DeleteConfirmModal';
 
 const ICON_MAP = { ArrowDown, Minus, ArrowUp, AlertTriangle };
 

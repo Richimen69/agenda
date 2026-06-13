@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createTicket } from "../services/api";
+import { createTicket } from "../../../services/api";
 import {
   Plus,
   CheckSquare,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import CreateTicketModal from "./CreateTicketModal";
 import TicketCard from "./TicketCard";
-import { FILTER_OPTIONS } from "../utils/constants";
+import { FILTER_OPTIONS } from "../../../utils/constants";
 
 export default function TicketList({
   tickets,

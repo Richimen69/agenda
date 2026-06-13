@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { loginUser } from '../services/api';
+import { loginUser } from '../../../services/api';
 import { Lock } from 'lucide-react';
 
 export default function Login({ onLoginSuccess }) {

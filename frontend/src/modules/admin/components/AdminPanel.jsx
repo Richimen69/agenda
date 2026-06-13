@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createUser, deleteUser } from '../../services/api';
+import { createUser, deleteUser } from '../../../services/api';
 import { Trash2, UserPlus } from 'lucide-react';
 
 export default function AdminPanel({ users, onUsersChange }) {

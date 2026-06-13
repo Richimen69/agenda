@@ -1,5 +1,5 @@
 import { Circle, CheckCircle } from 'lucide-react';
-import { PRIORITY_CONFIG, STATUS_CONFIG, getInitials } from '../utils/constants';
+import { PRIORITY_CONFIG, STATUS_CONFIG, getInitials } from '../../../utils/constants';
 import { ArrowDown, Minus, ArrowUp, AlertTriangle } from 'lucide-react';
 
 const ICON_MAP = { ArrowDown, Minus, ArrowUp, AlertTriangle };

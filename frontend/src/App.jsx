@@ -4,12 +4,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 import { useAppData } from "./hooks/useAppData";
 
-import Login from "./components/Login";
-import Layout from "./components/Layout";
-import WorkspacePage from "./pages/WorkspacePage";
-import TicketDetailPage from "./pages/TicketDetailPage";
-import AdminPage from "./pages/AdminPage";
-import AgendaPage from "./pages/AgendaPage";
+import Login from "@modules/auth/pages/Login";
+import Layout from "@shared/components/Layout";
+import WorkspacePage from "./modules/proyectos/components/WorkspacePage";
+import TicketDetailPage from "./modules/proyectos/components/TicketDetailPage";
+import AdminPage from "@modules/admin/pages/AdminPage";
+import AgendaPage from "./modules/agenda/pages/AgendaPage";
+
 
 export default function App() {
   const { authUser, setAuthUser, isCheckingAuth, handleLogout } = useAuth();
