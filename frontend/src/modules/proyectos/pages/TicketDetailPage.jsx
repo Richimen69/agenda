@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import TicketDetail from "@modules/proyectos/components/TicketDetail";
+import TicketDetail from "../components/TicketDetail";
 import { deleteTicket } from "../../../services/api";
 
 export default function TicketDetailPage({

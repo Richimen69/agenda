@@ -6,8 +6,8 @@ import { useAppData } from "./hooks/useAppData";
 
 import Login from "@modules/auth/pages/Login";
 import Layout from "@shared/components/Layout";
-import WorkspacePage from "./modules/proyectos/components/WorkspacePage";
-import TicketDetailPage from "./modules/proyectos/components/TicketDetailPage";
+import WorkspacePage from "./modules/proyectos/pages/WorkspacePage";
+import TicketDetailPage from "./modules/proyectos/pages/TicketDetailPage";
 import AdminPage from "@modules/admin/pages/AdminPage";
 import AgendaPage from "./modules/agenda/pages/AgendaPage";
 
