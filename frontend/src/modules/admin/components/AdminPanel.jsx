@@ -6,7 +6,7 @@ export default function AdminPanel({ users, onUsersChange }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whats, setWhatsappPhone] = useState('');
   const [role, setRole] = useState('USER');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -14,8 +14,8 @@ export default function AdminPanel({ users, onUsersChange }) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const whats = "521" + whatsappPhone.replace(/\D/g, '');
-      const result = await createUser({ name, email, password, whats, role });
+      const whatsappPhone = "521" + whats.replace(/\D/g, '');
+      const result = await createUser({ name, email, password, whatsappPhone, role });
       if (result.success) {
         alert('Usuario creado con éxito');
         setName(''); setEmail(''); setPassword(''); setWhatsappPhone('');
@@ -56,7 +56,7 @@ export default function AdminPanel({ users, onUsersChange }) {
             <input type="text" placeholder="Nombre completo" required value={name} onChange={e => setName(e.target.value)} className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm" />
             <input type="email" placeholder="Correo electrónico" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm" />
             <input type="password" placeholder="Contraseña" required value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm" />
-            <input type="text" placeholder="WhatsApp (Ej: 7441234567)" required value={whatsappPhone} onChange={e => setWhatsappPhone(e.target.value)} className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm" />
+            <input type="text" placeholder="WhatsApp (Ej: 7441234567)" required value={whats} onChange={e => setWhatsappPhone(e.target.value)} className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm" />
             <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm font-semibold">
               <option value="USER">Usuario Normal</option>
               <option value="ADMIN">Administrador</option>

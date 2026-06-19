@@ -3,6 +3,8 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
     restart: always
     environment:
       POSTGRES_USER: ${PROD_POSTGRES_USER}
@@ -29,13 +31,12 @@ services:
       - redis
     volumes:
       - whatsapp_session:/app/.wwebjs_auth
+
   frontend:
     build: ./frontend
     restart: always
     ports:
       - "127.0.0.1:3000:80"
-    environment:
-      - VITE_API_URL=${PROD_VITE_API_URL}
     depends_on:
       - backend
 
