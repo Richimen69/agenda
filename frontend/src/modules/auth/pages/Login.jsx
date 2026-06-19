@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { loginUser } from "../../../services/api";
 import { LockKeyhole, Eye, EyeOff, AlertCircle } from "lucide-react";
-import ToyotaLogo from "../../../assets/toyota.svg";
+import ToyotaLogo from "../../../assets/toyotaname.svg";
 
 export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
