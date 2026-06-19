@@ -6,6 +6,7 @@ import {
   Calendar,
   ListChecks,
   Radio,
+  Link2,
   ChartBar,
 } from "lucide-react";
 import ToyotaLogo from "../../../public/toyota.svg";
@@ -30,7 +31,7 @@ export default function Layout({ authUser, onLogout }) {
             />
           </div>
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-            Workspace
+            Kyojin
           </h1>
         </div>
 
@@ -61,6 +62,13 @@ export default function Layout({ authUser, onLogout }) {
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/kaizen" ? "bg-layout-hover ext-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
           >
             <Radio className="w-5 h-5" /> Kaizen
+          </Link>
+
+          <Link
+            to="/marketing"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/marketing" ? "bg-layout-hover ext-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+          >
+            <Link2 className="w-5 h-5" /> Marketing
           </Link>
 
           {authUser?.role === "ADMIN" && (

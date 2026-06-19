@@ -219,6 +219,35 @@ export const getTickets = async (req, res) => {
   }
 };
 
+export const getTicketById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+      include: {
+        creator: { select: { name: true } },
+        assignees: { select: { id: true, name: true } },
+        subtasks: { orderBy: { createdAt: "asc" } },
+        comments: {
+          include: { user: { select: { name: true } } },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Ticket no encontrado" });
+    }
+
+    res.json({ success: true, data: ticket });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // NUEVA FUNCION: Agregar comentario y cambiar estado automaticamente
 export const addComment = async (req, res) => {
   try {

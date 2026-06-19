@@ -10,7 +10,7 @@ import WorkspacePage from "./modules/proyectos/pages/WorkspacePage";
 import TicketDetailPage from "./modules/proyectos/pages/TicketDetailPage";
 import AdminPage from "@modules/admin/pages/AdminPage";
 import AgendaPage from "./modules/agenda/pages/AgendaPage";
-
+import MarketingPage from "@modules/marketing/pages/MarketingPage"
 
 export default function App() {
   const { authUser, setAuthUser, isCheckingAuth, handleLogout } = useAuth();
@@ -74,12 +74,7 @@ export default function App() {
           />
           <Route
             path="agenda"
-            element={
-              <AgendaPage
-                events={events}
-                authUser={authUser}
-              />
-            }
+            element={<AgendaPage events={events} authUser={authUser} />}
           />
 
           <Route
@@ -92,6 +87,7 @@ export default function App() {
               />
             }
           />
+          <Route path="marketing" element={<MarketingPage authUser={authUser} />} />
         </Route>
       </Routes>
     </BrowserRouter>

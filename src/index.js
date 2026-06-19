@@ -14,12 +14,14 @@ import {
   getTickets,
   addComment,
   deleteTicket,
+  getTicketById,
   addSubtask,
   toggleSubtask,
   deleteSubtask,
   updateTicketAssignees,
 } from "./ticket.controller.js";
 import { login, createUser, getUsers, deleteUser, hardDeleteUser  } from "./user.controller.js";
+import { createLink, getLinks, redirectLink, getLinkStats  } from "./shortlink.controller.js"
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -39,6 +41,7 @@ app.get("/api/events", getEvents);
 // Rutas de Tickets / Proyectos
 app.post("/api/tickets", createTicket);
 app.get("/api/tickets", getTickets);
+app.get("/api/tickets/:id", getTicketById); 
 app.patch("/api/tickets/:id/status", updateTicketStatus);
 app.patch("/api/tickets/:id/priority", updateTicketPriority);
 app.post("/api/tickets/:id/comments", addComment);
@@ -48,6 +51,11 @@ app.post("/api/tickets/:id/subtasks", addSubtask);
 app.patch("/api/subtasks/:subtaskId", toggleSubtask);
 app.delete("/api/subtasks/:subtaskId", deleteSubtask);
 app.patch("/api/tickets/:id/assignees", updateTicketAssignees);
+
+app.post("/api/links", createLink);
+app.get("/api/links", getLinks);
+app.get("/api/links/stats", getLinkStats);
+app.get("/s/:shortCode", redirectLink);
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
