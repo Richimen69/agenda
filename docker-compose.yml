@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password_seguro_123
-      POSTGRES_DB: task_db
+      POSTGRES_USER: ${PROD_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PROD_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${PROD_POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -19,22 +19,23 @@ services:
     build: .
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:5000:3000"
     environment:
-      - DATABASE_URL=postgresql://admin:password_seguro_123@postgres:5432/task_db?schema=public
-      - REDIS_URL=redis://redis:6379
       - PORT=3000
+      - DATABASE_URL=${PROD_DATABASE_URL}
+      - REDIS_URL=${PROD_REDIS_URL}
     depends_on:
       - postgres
       - redis
     volumes:
-      - whatsapp_session:/app/.wwebjs_auth # Guarda la sesion de WhatsApp para no escanear el QR a cada rato
-
+      - whatsapp_session:/app/.wwebjs_auth
   frontend:
     build: ./frontend
     restart: always
     ports:
-      - "80:80"
+      - "127.0.0.1:3000:80"
+    environment:
+      - VITE_API_URL=${PROD_VITE_API_URL}
     depends_on:
       - backend
 

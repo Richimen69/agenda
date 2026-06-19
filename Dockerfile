@@ -18,7 +18,8 @@ RUN npm install
 
 COPY prisma ./prisma/
 RUN npx prisma generate
-
+# Dentro de tu Dockerfile del back:
+CMD npx prisma db push && node src/index.js
 COPY . .
 
 EXPOSE 3000
