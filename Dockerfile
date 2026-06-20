@@ -1,5 +1,5 @@
 # Dockerfile (Backend)
-FROM node:22-alpine
+FROM node:22-slim
 
 # Instalar dependencias para Puppeteer (WhatsApp Web)
 RUN apt-get update && apt-get install -y \

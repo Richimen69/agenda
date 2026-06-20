@@ -1,6 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
-
 export const fetchJSON = async (url, method = 'GET', body) => {
+
   const res = await fetch(url, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : {},
