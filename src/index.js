@@ -21,7 +21,7 @@ import {
   updateTicketAssignees,
 } from "./ticket.controller.js";
 import { login, createUser, getUsers, deleteUser, hardDeleteUser  } from "./user.controller.js";
-import { createLink, getLinks, redirectLink, getLinkStats  } from "./shortlink.controller.js"
+import { createLink, getLinks, redirectLink, getLinkStats, deleteLink   } from "./shortlink.controller.js"
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -56,6 +56,7 @@ app.post("/api/links", createLink);
 app.get("/api/links", getLinks);
 app.get("/api/links/stats", getLinkStats);
 app.get("/s/:shortCode", redirectLink);
+app.delete("/api/links/:id", deleteLink);
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo`);

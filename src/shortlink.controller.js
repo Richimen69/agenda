@@ -122,3 +122,31 @@ export const redirectLink = async (req, res) => {
   }
 };
 
+export const deleteLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.shortLink.delete({
+      where: { 
+        id: id 
+      }
+    });
+    return res.status(200).json({ 
+      success: true, 
+      message: "Enlace eliminado correctamente." 
+    });
+
+  } catch (error) {
+    console.error("Error al eliminar el shortlink:", error);
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ 
+        success: false, 
+        error: "El enlace no existe o ya fue eliminado." 
+      });
+    }
+    return res.status(500).json({ 
+      success: false, 
+      error: "Error interno al eliminar el enlace." 
+    });
+  }
+};
