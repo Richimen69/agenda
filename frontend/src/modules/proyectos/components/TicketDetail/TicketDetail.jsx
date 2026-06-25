@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AlignLeft } from "lucide-react"; // Nuevo ícono para la descripción
 import DeleteConfirmModal from "@modules/proyectos/components/DeleteConfirmModal";
+import { Navigate } from "react-router-dom";
 
 import TicketHeader from "./TicketHeader";
 import TicketPeopleCards from "./TicketPeopleCards";
@@ -19,7 +20,6 @@ export default function TicketDetail({
   onUpdate,
 }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
   const isCreator = ticket.creatorId === activeUserId;
 
   return (
@@ -29,7 +29,9 @@ export default function TicketDetail({
       <TicketHeader
         ticket={ticket}
         isCreator={isCreator}
-        onBack={onBack}
+        onBack={() => {
+          window.location.href = "/";
+        }}
         onStatusChange={onStatusChange}
         onDeleteRequest={() => setIsDeleteModalOpen(true)}
       />

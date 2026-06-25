@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { sileo } from "sileo";
+import { CircleAlert } from "lucide-react";
 import { createLink } from "@services/shortlinks.api";
 
-export default function CreateShortLinkForm({ onLinkCreated, userId  }) {
+export default function CreateShortLinkForm({ onLinkCreated, userId }) {
   const [formData, setFormData] = useState({ originalUrl: "", shortCode: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -12,12 +14,37 @@ export default function CreateShortLinkForm({ onLinkCreated, userId  }) {
     setError(null);
 
     try {
-      // Le agregamos el userId a la data que enviamos a la API 👇
       await createLink({ ...formData, userId });
       setFormData({ originalUrl: "", shortCode: "" });
+      sileo.success({
+        title: "Campaña creada",
+        description: "La campaña se registro exitosamente",
+        fill: "#D8F3DC",
+        styles: {
+          title: "text-black/75!",
+          description: "text-black/75!",
+          badge: "bg-white!",
+        },
+      });
       if (onLinkCreated) onLinkCreated();
     } catch (err) {
-      setError(err.message || "Ocurrió un error al crear el enlace");
+      if (err.response && err.response.status === 409) {
+        sileo.error({
+          title: "Error",
+          description: "La campaña ya existe",
+          fill: "#EB0A1E",
+          icon: <CircleAlert className="size-4.5" />,
+          styles: {
+            title: "text-white!",
+            description: "text-white!",
+            badge: "bg-white!",
+          },
+        });
+      } else if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError(err.message || "Ocurrió un error al crear el enlace");
+      }
     } finally {
       setLoading(false);
     }

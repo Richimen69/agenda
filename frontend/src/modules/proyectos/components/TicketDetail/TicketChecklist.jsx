@@ -1,6 +1,18 @@
 import { useState } from "react";
-import { CheckSquare, Square, Plus, Trash2, X } from "lucide-react";
-import { addSubtask, toggleSubtask, deleteSubtask } from "../../../../services/api";
+import {
+  CheckSquare,
+  Square,
+  Plus,
+  Trash2,
+  X,
+  CircleAlert,
+} from "lucide-react";
+import {
+  addSubtask,
+  toggleSubtask,
+  deleteSubtask,
+} from "../../../../services/api";
+import { sileo } from "sileo";
 
 function getInitials(name) {
   return name
@@ -27,7 +39,11 @@ export default function TicketChecklist({
   const handleAddSubtask = async () => {
     if (!newSubtaskTitle.trim()) return;
     try {
-      const res = await addSubtask(ticket.id, newSubtaskTitle, newSubtaskAssignee);
+      const res = await addSubtask(
+        ticket.id,
+        newSubtaskTitle,
+        newSubtaskAssignee,
+      );
       if (res.success) {
         setNewSubtaskTitle("");
         setNewSubtaskAssignee("");
@@ -45,7 +61,17 @@ export default function TicketChecklist({
       if (res.success) onUpdate();
       else alert(res.error);
     } catch {
-      alert("Error al actualizar subtarea");
+      sileo.error({
+        title: "Error",
+        description: "No puedes completar esta tarea",
+        fill: "#EB0A1E",
+        icon: <CircleAlert className="size-4.5" />,
+        styles: {
+          title: "text-white!",
+          description: "text-white!",
+          badge: "bg-white!",
+        },
+      });
     }
   };
 
@@ -114,7 +140,9 @@ export default function TicketChecklist({
                 <div className="flex-1 min-w-0">
                   <p
                     className={`text-sm font-medium transition-all truncate ${
-                      isDone ? "text-content-disabled line-through" : "text-content-main"
+                      isDone
+                        ? "text-content-disabled line-through"
+                        : "text-content-main"
                     }`}
                   >
                     {st.title}
@@ -130,7 +158,9 @@ export default function TicketChecklist({
                       </div>
                       <span
                         className={`text-xs font-medium ${
-                          isDone ? "text-content-disabled" : "text-content-muted"
+                          isDone
+                            ? "text-content-disabled"
+                            : "text-content-muted"
                         }`}
                       >
                         {assigneeName}

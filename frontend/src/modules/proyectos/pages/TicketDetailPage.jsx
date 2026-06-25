@@ -23,24 +23,32 @@ export default function TicketDetailPage({ authUser }) {
   const handleDeleteTicket = async () => {
     try {
       const result = await deleteTicket(id, authUser.id);
-      if (result.success) navigate("/");
+      if (result.success) {
+        window.location.href = "/";
+      }
     } catch {
       alert("Error al eliminar el proyecto.");
     }
   };
 
   if (isLoading) {
-    return <p className="text-center py-10 text-gray-500 font-medium">Cargando...</p>;
+    return (
+      <p className="text-center py-10 text-gray-500 font-medium">Cargando...</p>
+    );
   }
 
   if (!ticket) {
-    return <p className="text-center py-10 text-gray-500 font-medium">Proyecto no encontrado</p>;
+    return (
+      <p className="text-center py-10 text-gray-500 font-medium">
+        Proyecto no encontrado
+      </p>
+    );
   }
 
   return (
     <TicketDetail
       ticket={ticket}
-      users={ticket.assignees} // o pásale la lista completa de usuarios si la necesitas para reasignar
+      users={ticket.assignees}
       activeUserId={authUser.id}
       onBack={() => navigate("/")}
       onStatusChange={(ticketId, status) => changeStatus(status)}

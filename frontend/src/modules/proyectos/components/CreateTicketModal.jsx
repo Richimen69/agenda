@@ -79,7 +79,7 @@ export default function CreateTicketModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-content-muted hover:text-content-main hover:bg-layout-hover p-1.5 rounded-md transition-colors"
+            className="text-content-muted cursor-pointer hover:text-content-main hover:bg-layout-hover p-1.5 rounded-md transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
