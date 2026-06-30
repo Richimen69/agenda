@@ -3,12 +3,16 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  X,
 } from "lucide-react";
-import EventosList from "./EventosList";
-import CrearEventModal from "./CrearEventModal";
 
-export default function AgendaCalendar({ events }) {
+const MAX_EVENTOS_VISIBLES = 3;
+
+export default function AgendaCalendar({
+  events,
+  selectedDate,
+  onSelectDay,
+  userId,
+}) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Lógica para obtener los días del mes
@@ -39,8 +43,6 @@ export default function AgendaCalendar({ events }) {
 
   // Generar la cuadrícula del calendario
   const days = [];
-  const [date, setDate] = useState();
-  const [time, setTime] = useState("12:00");
   // Espacios vacíos del mes anterior
   for (let i = 0; i < firstDay; i++) {
     days.push({ empty: true, key: `empty-${i}` });
@@ -71,19 +73,9 @@ export default function AgendaCalendar({ events }) {
       year === today.getFullYear()
     );
   };
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [itemSeleccionado, setItemSeleccionado] = useState(null);
-  const openModal = (item) => {
-    console.log(item);
-    setDate(item.dateStr)
-    setItemSeleccionado(item);
-    setIsModalOpen(true);
-  };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setItemSeleccionado();
-    setTime("12:00")
+  const openModal = (item) => {
+    onSelectDay?.(item);
   };
 
   return (
@@ -91,7 +83,7 @@ export default function AgendaCalendar({ events }) {
       {/* HEADER DEL CALENDARIO */}
       <div className="flex justify-between items-center p-6 border-b border-gray-100">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+          <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-brand">
             <CalendarIcon className="w-6 h-6" />
           </div>
           <div>
@@ -121,7 +113,7 @@ export default function AgendaCalendar({ events }) {
           </div>
           <button
             onClick={goToday}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+            className="bg-brand hover:bg-brand-hover text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
           >
             Hoy
           </button>
@@ -143,107 +135,69 @@ export default function AgendaCalendar({ events }) {
         </div>
 
         {/* Celdas de los días */}
-        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
-          {days.map((item, index) => (
-            <div
-              key={item.key}
-              onClick={() => openModal(item)}
-              className={`min-h-30 p-2 border-b border-r cursor-pointer border-gray-100 ${index % 7 === 6 ? "border-r-0" : ""} hover:bg-gray-50 transition-colors`}
-            >
-              {!item.empty && (
-                <div className="h-full flex flex-col">
-                  <div className="flex justify-start mb-1">
-                    <span
-                      className={`w-7 h-7 flex items-center justify-center text-sm font-bold rounded-full ${isToday(item.day) ? "bg-indigo-600 text-white" : "text-gray-700"}`}
-                    >
-                      {item.day}
-                    </span>
-                  </div>
+        <div className="grid grid-cols-7 flex-1 auto-rows-[7.5rem]">
+          {days.map((item, index) => {
+            const isSelected = !item.empty && item.dateStr === selectedDate;
+            const eventosVisibles = item.empty
+              ? []
+              : item.events.slice(0, MAX_EVENTOS_VISIBLES);
+            const eventosOcultos = item.empty
+              ? 0
+              : item.events.length - eventosVisibles.length;
 
-                  {/* Renderizar Eventos del día */}
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-                    {item.events.map((ev) => {
-                      const time = new Date(ev.scheduledAt).toLocaleTimeString(
-                        "es-MX",
-                        { hour: "2-digit", minute: "2-digit" },
-                      );
-                      return (
-                        <div
-                          key={ev.id}
-                          className="bg-green-50 border border-green-100 text-green-700 text-[10px] font-semibold px-2 py-1.5 rounded-md truncate cursor-pointer hover:bg-green-100 transition-colors"
-                          title={ev.title}
-                        >
-                          {time} - {ev.title}
+            return (
+              <div
+                key={item.key}
+                onClick={() => !item.empty && openModal(item)}
+                className={`h-30 p-2 border-b border-r cursor-pointer border-gray-100 overflow-hidden ${index % 7 === 6 ? "border-r-0" : ""} ${isSelected ? "bg-indigo-50/60" : "hover:bg-gray-50"} transition-colors`}
+              >
+                {!item.empty && (
+                  <div className="h-full flex flex-col">
+                    <div className="flex justify-start mb-1 shrink-0">
+                      <span
+                        className={`w-7 h-7 flex items-center justify-center text-sm font-bold rounded-full ${isToday(item.day) ? "bg-brand text-white" : "text-gray-700"}`}
+                      >
+                        {item.day}
+                      </span>
+                    </div>
+
+                    {/* Renderizar Eventos del día (con tope fijo) */}
+                    <div className="flex-1 min-h-0 space-y-1 overflow-hidden">
+                      {eventosVisibles.map((ev) => {
+                        const time = new Date(
+                          ev.scheduledAt,
+                        ).toLocaleTimeString("es-MX", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
+                        const esCreadorPropio = ev.creatorId === userId;
+                        return (
+                          <div
+                            key={ev.id}
+                            className={`text-[10px] font-semibold px-2 py-1.5 rounded-md truncate cursor-pointer transition-colors ${
+                              esCreadorPropio
+                                ? "bg-brand text-white hover:bg-brand-hover"
+                                : "bg-[#1D4ED8] text-white hover:bg-[#1D4ED880]"
+                            }`}
+                            title={ev.title}
+                          >
+                            {time} - {ev.title}
+                          </div>
+                        );
+                      })}
+                      {eventosOcultos > 0 && (
+                        <div className="text-[10px] font-semibold text-gray-400 px-2 hover:text-gray-600 transition-colors">
+                          +{eventosOcultos} más
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
-      <CrearEventModal isOpen={isModalOpen} onClose={closeModal}>
-        <div className="flex px-6 py-4 justify-between items-center border-b border-layout-border bg-layout-surface">
-          <h2 className="text-lg font-semibold text-content-main tracking-tight">
-            Crear Nuevo Proyecto
-          </h2>
-          <button
-            onClick={closeModal}
-            className="text-content-muted hover:text-content-main hover:bg-layout-hover p-1.5 rounded-md transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="px-6 py-4 space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-content-main mb-1.5">
-              Titulo
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ej: Rediseño de la intranet corporativa"
-              className="w-full bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-shadow"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Fecha
-              </label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Hora
-              </label>
-              <input
-                type="time"
-                required
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <button
-            onClick={closeModal}
-            className="px-4 py-2 font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
-          >
-            Entendido
-          </button>
-        </div>
-      </CrearEventModal>
     </div>
   );
 }

@@ -77,7 +77,9 @@ export default function App() {
             />
             <Route
               path="agenda"
-              element={<AgendaPage events={events} authUser={authUser} />}
+              element={
+                <AgendaPage events={events} authUser={authUser} users={users} onEventsChange={fetchData}/>
+              }
             />
 
             <Route

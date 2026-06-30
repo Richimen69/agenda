@@ -46,7 +46,7 @@ export default function CreateTicketForm({
   };
 
   return (
-    <section className="bg-white rounded-lg shadow-md p-6 border-t-4 border-indigo-500">
+    <section className="bg-white rounded-lg shadow-md p-6 border-t-4 border-brand">
       <h2 className="text-lg font-semibold text-gray-700 mb-4">
         Crear Nuevo Proyecto
       </h2>

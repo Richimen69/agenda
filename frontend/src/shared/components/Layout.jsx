@@ -49,7 +49,7 @@ export default function Layout({ authUser, onLogout }) {
           >
             <Calendar className="w-5 h-5" /> Agenda
           </Link>
-
+          {/*
           <Link
             to="/crm"
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/crm" ? "bg-layout-hover ext-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
@@ -62,7 +62,7 @@ export default function Layout({ authUser, onLogout }) {
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/kaizen" ? "bg-layout-hover ext-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
           >
             <Radio className="w-5 h-5" /> Kaizen
-          </Link>
+          </Link> */}
 
           <Link
             to="/marketing"

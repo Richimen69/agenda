@@ -39,7 +39,6 @@ export default function TicketCard({
   const statusConfig = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.NUEVO;
   const priorityConfig = PRIORITY_CONFIG[ticket.priority];
   const IconoDinamico = ICON_MAP[priorityConfig?.icon];
-
   // 2. Footer optimizado (El que construimos previamente)
   const footer =
     variant === "assignee" ? (
@@ -50,7 +49,7 @@ export default function TicketCard({
           </span>
           <div className="flex items-center gap-1.5">
             <div className="w-5 h-5 rounded-full bg-status-neutral text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-layout-surface">
-              {getInitials(ticket.creator?.name)}
+              {activeUserId = ticket.creator?.id ? getInitials(ticket.creator?.name) : null}
             </div>
             <span className="text-xs font-semibold text-content-main">
               {ticket.creator?.name}
@@ -133,11 +132,10 @@ export default function TicketCard({
       </div>
     );
 
-  // 3. Render Principal (Reducción de ruido visual)
+
   return (
     <div
       onClick={onClick}
-      // Aplicamos opacidad si está completada para dar "cierre" visual. Reemplazamos los bordes de color por un hover sutil del fondo.
       className={`group flex items-start gap-3 p-4 bg-layout-surface border-b border-layout-border hover:bg-layout-hover transition-colors cursor-pointer ${isCompleted ? "opacity-75" : ""}`}
     >
       {/* Ícono Interactivo de Estado */}
@@ -146,37 +144,27 @@ export default function TicketCard({
           {isCompleted ? (
             <CheckCircle className="w-4 h-4 text-status-success" />
           ) : (
-            // Al hacer hover en la tarjeta, indicamos que se puede clickear el círculo (Microinteracción)
             <Circle className="w-4 h-4 text-layout-border group-hover:text-brand transition-colors" />
           )}
         </div>
       )}
 
       <div className="flex-1 min-w-0">
-        {/* TÍTULO PRIMERO (F-Pattern) + Tachado si está completado */}
         <h4
           className={`text-sm font-medium mb-1.5 transition-all truncate ${isCompleted ? "text-content-disabled line-through" : "text-content-main"}`}
         >
           {ticket.title}
         </h4>
-
-        {/* BADGES ABAJO (Legibles, text-[11px] es el mínimo WCAG, no 10px) */}
         <div className="flex items-center gap-3 mb-1.5">
-          {/* 1. ESTADO (Con fondo, tiene el mayor peso visual) */}
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${getSemanticStatus(ticket.status)}`}
           >
             {statusConfig.label}
           </span>
-
-          {/* Divisor sutil opcional para separar conceptos */}
           <span className="w-1 h-1 rounded-full bg-layout-border"></span>
-
-          {/* 2. PRIORIDAD (Sin fondo, solo icono + texto. Más limpio) */}
           <span
             className={`flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider ${getSemanticPriority(ticket.priority)}`}
           >
-            {/* Lucide icon perfectamente centrado */}
             {IconoDinamico && (
               <span className="flex items-center justify-center">
                 <IconoDinamico size={14} strokeWidth={2.5} />

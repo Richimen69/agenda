@@ -180,7 +180,6 @@ export default function CreateTicketModal({
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      {/* Avatar del usuario */}
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${isSelected ? "bg-brand" : "bg-status-neutral"}`}>
                         {getInitials(user.name)}
                       </div>
@@ -188,7 +187,6 @@ export default function CreateTicketModal({
                         {user.name}
                       </span>
                     </div>
-                    {/* Checkbox customizado corporativo */}
                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                       isSelected ? "bg-brand border-brand text-white" : "border-layout-border bg-layout-surface"
                     }`}>
@@ -276,7 +274,6 @@ export default function CreateTicketModal({
           >
             Cancelar
           </button>
-          {/* El botón primario usa el id del form para hacer submit desde afuera del mismo si fuera necesario, o por estándar HTML5 */}
           <button
             form="create-project-form"
             type="submit"

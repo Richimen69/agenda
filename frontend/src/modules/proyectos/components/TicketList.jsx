@@ -142,13 +142,10 @@ export default function TicketList({
         </div>
       </div>
 
-      {/* 4. COLUMNAS DE DATOS (Alta Densidad de Información) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         
         {/* Columna: Mis Tareas */}
-        {/* Corregido: rounded-3xl a rounded-xl, eliminados los padding internos excesivos */}
         <div className="bg-layout-surface rounded-xl border border-layout-border shadow-sm flex flex-col overflow-hidden">
-          {/* Header de Columna Diferenciado */}
           <div className="flex justify-between items-center px-5 py-4 border-b border-layout-border bg-layout-app/50">
             <div className="flex items-center gap-3">
               <div className="p-1.5 bg-white border border-layout-border rounded-md text-content-muted">
@@ -160,8 +157,6 @@ export default function TicketList({
               {misTareas.length}
             </span>
           </div>
-          
-          {/* Lista sin espacios (space-y-4 eliminado). El TicketCard ya maneja los bordes */}
           <div className="flex flex-col">
             {misTareas.length === 0 ? (
               <div className="px-6 py-10 flex flex-col items-center justify-center text-content-muted">

@@ -100,3 +100,99 @@ export const getEvents = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export const getEventById = async (req, res) => {
+  try {
+    const { id } = req.params; // viene de la ruta: /api/events/:id
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        creator: { select: { name: true } },
+        attendees: { select: { name: true } },
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        error: "Evento no encontrado",
+      });
+    }
+
+    res.json({ success: true, data: event });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const deleteEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.query;
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        error: "Evento no encontrado",
+      });
+    }
+
+    if (event.creatorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: "Solo el creador puede borrar este evento",
+      });
+    }
+
+    await prisma.event.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, message: "Evento eliminado correctamente" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const updateEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, ...data } = req.body; // o req.user.id si tienes auth middleware
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        error: "Evento no encontrado",
+      });
+    }
+
+    if (event.creatorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: "Solo el creador puede actualizar este evento",
+      });
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data,
+      include: {
+        creator: { select: { name: true } },
+        attendees: { select: { name: true } },
+      },
+    });
+
+    res.json({ success: true, data: updatedEvent });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

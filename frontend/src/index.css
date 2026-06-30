@@ -13,6 +13,31 @@
 .animate-fade-in  { animation: fade-in  0.5s ease-out; }
 .animate-scale-in { animation: scale-in 0.5s ease-out; }
 
+/* Scrollbar delgada y discreta, usando la paleta corporativa.
+   Aplicar con la clase .scrollbar-thin en cualquier contenedor con scroll. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-layout-border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-layout-border);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-content-disabled);
+}
+
 @theme {
   /* 1. Identidad Corporativa (Uso altamente restringido) */
   --color-brand: #EB0A1E;         /* Rojo Toyota - Acciones primarias */
@@ -29,7 +54,7 @@
   --color-content-main: #1A1A1A;  /* Texto principal */
   --color-content-muted: #64748B; /* Meta-datos, placeholders */
   --color-content-disabled: #94A3B8; /* Tareas completadas */
-
+  --color-muted-foreground: oklch(0.556 0 0);
   /* 4. Semántica de Estados (Pills, Badges) */
   --color-status-success: #0F766E;
   --color-status-warning: #D97706;
@@ -39,6 +64,7 @@
   /* Tipografía base corporativa */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
+
 
 @layer base {
   body {

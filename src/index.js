@@ -2,7 +2,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { createEvent, getEvents } from "./agenda.controller.js";
+import { createEvent, getEvents, getEventById, deleteEvent, updateEvent } from "./agenda.controller.js";
 import prisma from "./prisma.js";
 import "./queue.js";
 import "./cron.js";
@@ -38,6 +38,9 @@ app.delete('/api/users/:id/hard', hardDeleteUser);
 // Nuestra ruta principal de Agenda
 app.post("/api/events", createEvent);
 app.get("/api/events", getEvents);
+app.get("/api/events/:id", getEventById);
+app.delete("/api/events/:id", deleteEvent);
+app.put("/api/events/:id", updateEvent);
 // Rutas de Tickets / Proyectos
 app.post("/api/tickets", createTicket);
 app.get("/api/tickets", getTickets);
