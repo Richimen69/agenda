@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createUser, deleteUser } from "../../../services/api";
+import { createUser, deleteUser } from "../services/users.api";
 import { Trash2, UserPlus, CircleAlert } from "lucide-react";
 import { sileo } from "sileo";
 
@@ -72,15 +72,6 @@ export default function AdminPanel({ users, onUsersChange }) {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Panel de Administración
-        </h2>
-        <p className="text-gray-500 text-sm">
-          Gestiona los accesos de tu equipo.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* FORMULARIO CREAR USUARIO */}
         <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
@@ -99,6 +90,7 @@ export default function AdminPanel({ users, onUsersChange }) {
             <input
               type="email"
               placeholder="Correo electrónico"
+              autoComplete="username"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -111,6 +103,7 @@ export default function AdminPanel({ users, onUsersChange }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm"
+              autoComplete="current-password"
             />
             <input
               type="text"

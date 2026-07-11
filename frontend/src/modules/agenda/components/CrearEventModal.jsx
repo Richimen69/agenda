@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Check, CircleAlert, Search } from "lucide-react";
-import { createEvent } from "@services/events.api";
+import { createEvent } from "@modules/agenda/services/events.api";
 import { sileo } from "sileo";
 
 const normalizar = (texto = "") =>

@@ -1,7 +1,7 @@
 import { Users, Trash2, Calendar, Clock, CircleAlert } from "lucide-react";
 import { useState } from "react";
 import EditEventModal from "./EditEventModal";
-import { deleteEvent } from "@services/events.api";
+import { deleteEvent } from "@modules/agenda/services//events.api";
 import { sileo } from "sileo";
 import DeleteConfirmModal from "../../proyectos/components/DeleteConfirmModal";
 export default function EventosList({ events, userId, onUpdated }) {

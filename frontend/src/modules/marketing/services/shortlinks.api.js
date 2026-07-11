@@ -1,4 +1,4 @@
-import { fetchJSON, API_URL } from './http';
+import { fetchJSON, API_URL } from '@core/http';
 
 export const getLinks = async () => {
   const res = await fetch(`${API_URL}/links`);

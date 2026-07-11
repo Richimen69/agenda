@@ -1,24 +1,35 @@
-import { useState, useCallback } from 'react';
-import { getUsers, getTickets, getEvents, updateTicketStatus, addTicketComment } from '../services/api';
+import { useState, useCallback } from "react";
+import {
+  getUsers,
+  getTickets,
+  getEvents,
+  updateTicketStatus,
+  addTicketComment,
+  getPlaces,
+} from "../services/api";
 
 export function useAppData(authUser) {
   const [users, setUsers] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [places, setPlaces] = useState([]);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
     setLoading(true);
     try {
-      const [usersData, ticketsData, eventsData] = await Promise.all([
-        getUsers(),
-        getTickets(authUser.id),
-        getEvents(authUser.id),
-      ]);
+      const [usersData, ticketsData, eventsData, placesData] =
+        await Promise.all([
+          getUsers(),
+          getTickets(authUser.id),
+          getEvents(authUser.id),
+          getPlaces(),
+        ]);
       setUsers(usersData);
       if (ticketsData.success) setTickets(ticketsData.data);
       if (eventsData.success) setEvents(eventsData.data);
+      if (placesData.success) setPlaces(placesData.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -36,5 +47,14 @@ export function useAppData(authUser) {
     fetchData();
   };
 
-  return { users, tickets, events, loading, fetchData, handleStatusChange, handleAddComment };
+  return {
+    users,
+    tickets,
+    events,
+    places,
+    loading,
+    fetchData,
+    handleStatusChange,
+    handleAddComment,
+  };
 }

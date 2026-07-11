@@ -8,6 +8,7 @@ import {
   Radio,
   Link2,
   ChartBar,
+  FolderKanban,
 } from "lucide-react";
 import ToyotaLogo from "../../../public/toyota.svg";
 
@@ -39,9 +40,21 @@ export default function Layout({ authUser, onLogout }) {
         <nav className="flex-1 px-4 space-y-2 mt-4">
           <Link
             to="/"
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/" || location.pathname.startsWith("/tickets") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500  hover:text-gray-900"}`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/" || location.pathname.startsWith("/dashboard") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500  hover:text-gray-900"}`}
           >
-            <ListChecks className="w-5 h-5" /> Proyectos
+            <ChartBar className="w-5 h-5" /> Dashboard
+          </Link>
+          <Link
+            to="/proyectos"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/proyectos" || location.pathname.startsWith("/proyectos") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500  hover:text-gray-900"}`}
+          >
+            <FolderKanban className="w-5 h-5" /> Proyectos
+          </Link>
+          <Link
+            to="/tareas"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/tareas" || location.pathname.startsWith("/tareas") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500  hover:text-gray-900"}`}
+          >
+            <ListChecks className="w-5 h-5" /> Tareas
           </Link>
           <Link
             to="/agenda"
@@ -56,13 +69,13 @@ export default function Layout({ authUser, onLogout }) {
           >
             <ChartBar className="w-5 h-5" /> CRM
           </Link>
-
+*/}
           <Link
-            to="/kaizen"
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/kaizen" ? "bg-layout-hover ext-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+            to="/live"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/live" ? "bg-layout-hover ext-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
           >
-            <Radio className="w-5 h-5" /> Kaizen
-          </Link> */}
+            <Radio className="w-5 h-5" /> Live
+          </Link>
 
           <Link
             to="/marketing"

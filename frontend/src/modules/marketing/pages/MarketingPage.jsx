@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import CreateShortLinkForm from "../components/CreateShortLinkForm";
 import ShortLinkList from "../components/ShortLinkList";
-import { getLinks, getStats } from "@services/shortlinks.api";
+import { getLinks, getStats } from "@modules/marketing/services//shortlinks.api";
 import MarketingDashboard from "../components/MarketingDashboard";
 
 export default function MarketingPage({ authUser }) {

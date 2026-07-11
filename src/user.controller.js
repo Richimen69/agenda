@@ -1,17 +1,23 @@
-import prisma from './prisma.js';
-import bcrypt from 'bcryptjs';
+import prisma from "./prisma.js";
+import bcrypt from "bcryptjs";
 
 // 1. LOGIN
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
 
     // Comparamos la contraseña enviada con la encriptada en la BD
     const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
+    if (!isValidPassword)
+      return res
+        .status(401)
+        .json({ success: false, error: "Contraseña incorrecta" });
 
     // Quitamos el password antes de enviarlo al frontend por seguridad
     const { password: _, ...userWithoutPassword } = user;
@@ -35,15 +41,18 @@ export const createUser = async (req, res) => {
         email,
         password: hashedPassword,
         whatsappPhone,
-        role: role || 'USER'
-      }
+        role: role || "USER",
+      },
     });
 
     const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json({ success: true, data: userWithoutPassword });
   } catch (error) {
-     console.error("ERROR REAL AL CREAR USUARIO:", error);
-    res.status(500).json({ success: false, error: 'El correo ya existe o los datos son inválidos' });
+    console.error("ERROR REAL AL CREAR USUARIO:", error);
+    res.status(500).json({
+      success: false,
+      error: "El correo ya existe o los datos son inválidos",
+    });
   }
 };
 
@@ -51,11 +60,51 @@ export const createUser = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, whatsappPhone: true, role: true, isActive: true }
+      select: {
+        id: true,
+        area: {
+          select: {
+            nombre: true,
+            parent: { select: { nombre: true } },
+          },
+        },
+        name: true,
+        email: true,
+        whatsappPhone: true,
+        role: true,
+        isActive: true,
+      },
     });
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        area: {
+          select: {
+            nombre: true, // "Asesores de Ventas"
+            parent: { select: { nombre: true } }, // "Ventas"
+          },
+        },
+      },
+    });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -64,28 +113,54 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.user.delete({ where: { id } });
-    res.json({ success: true, message: 'Usuario eliminado' });
+    res.json({ success: true, message: "Usuario eliminado" });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'No se puede borrar un usuario que tiene proyectos asignados' });
+    res.status(500).json({
+      success: false,
+      error: "No se puede borrar un usuario que tiene proyectos asignados",
+    });
   }
 };
 // BORRADO FÍSICO (Hard Delete - Solo para uso desde Postman)
 export const hardDeleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    await prisma.user.delete({ 
-      where: { id } 
+
+    await prisma.user.delete({
+      where: { id },
     });
-    
-    res.json({ 
-      success: true, 
-      message: 'Usuario borrado DEFINITIVAMENTE de la base de datos' 
+
+    res.json({
+      success: true,
+      message: "Usuario borrado DEFINITIVAMENTE de la base de datos",
     });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: 'No se puede borrar físicamente porque el usuario ya creó proyectos o eventos. Debes borrar sus proyectos primero. Detalle: ' + error.message 
+    res.status(500).json({
+      success: false,
+      error:
+        "No se puede borrar físicamente porque el usuario ya creó proyectos o eventos. Debes borrar sus proyectos primero. Detalle: " +
+        error.message,
     });
+  }
+};
+
+export const asignarArea = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { areaId } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { areaId },
+      select: {
+        id: true,
+        name: true,
+        area: { select: { id: true, nombre: true } },
+      },
+    });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };

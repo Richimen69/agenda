@@ -22,6 +22,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^5.11.1",
+    "livekit-server-sdk": "^2.17.0",
     "node-cron": "^4.2.1",
     "pg": "^8.21.0",
     "qrcode-terminal": "^0.12.0",

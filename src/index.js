@@ -1,8 +1,13 @@
-// src/index.js
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { createEvent, getEvents, getEventById, deleteEvent, updateEvent } from "./agenda.controller.js";
+import {
+  createEvent,
+  getEvents,
+  getEventById,
+  deleteEvent,
+  updateEvent,
+} from "./agenda.controller.js";
 import prisma from "./prisma.js";
 import "./queue.js";
 import "./cron.js";
@@ -20,8 +25,41 @@ import {
   deleteSubtask,
   updateTicketAssignees,
 } from "./ticket.controller.js";
-import { login, createUser, getUsers, deleteUser, hardDeleteUser  } from "./user.controller.js";
-import { createLink, getLinks, redirectLink, getLinkStats, deleteLink   } from "./shortlink.controller.js"
+import {
+  login,
+  createUser,
+  getUsers,
+  deleteUser,
+  hardDeleteUser,
+  asignarArea,
+  getUserById,
+} from "./user.controller.js";
+import {
+  createLink,
+  getLinks,
+  redirectLink,
+  getLinkStats,
+  deleteLink,
+} from "./shortlink.controller.js";
+import {
+  crearProyecto,
+  obtenerDashboard,
+  obtenerProyectoPorId,
+} from "./proyecto.controller.js";
+import { crearAccion, obtenerArbolDeAcciones } from "./accion.controller.js";
+import { asignarParticipante } from "./participante.controller.js";
+import { registrarAvanceKpi } from "./kpi.controller.js";
+import { createArea, getAreasTree, deleteArea } from "./area.controller.js";
+import {
+  getLiveSessions,
+  getLiveSession,
+  createLiveSession,
+  finishLiveSession,
+  deleteLiveSession,
+  generateLiveKitToken,
+} from "./session.controller.js";
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -33,7 +71,9 @@ app.post("/api/login", login);
 app.get("/api/users", getUsers);
 app.post("/api/users", createUser);
 app.delete("/api/users/:id", deleteUser);
-app.delete('/api/users/:id/hard', hardDeleteUser); 
+app.delete("/api/users/:id/hard", hardDeleteUser);
+app.patch("/api/users/:id/areas", asignarArea);
+app.get("/api/users/:id", getUserById);
 
 // Nuestra ruta principal de Agenda
 app.post("/api/events", createEvent);
@@ -44,7 +84,7 @@ app.put("/api/events/:id", updateEvent);
 // Rutas de Tickets / Proyectos
 app.post("/api/tickets", createTicket);
 app.get("/api/tickets", getTickets);
-app.get("/api/tickets/:id", getTicketById); 
+app.get("/api/tickets/:id", getTicketById);
 app.patch("/api/tickets/:id/status", updateTicketStatus);
 app.patch("/api/tickets/:id/priority", updateTicketPriority);
 app.post("/api/tickets/:id/comments", addComment);
@@ -60,6 +100,33 @@ app.get("/api/links", getLinks);
 app.get("/api/links/stats", getLinkStats);
 app.get("/s/:shortCode", redirectLink);
 app.delete("/api/links/:id", deleteLink);
+
+// Proyectos y Dashboard
+app.post("/api/proyectos", crearProyecto);
+app.get("/api/proyectos/dashboard", obtenerDashboard);
+app.get("/api/proyectos/:id", obtenerProyectoPorId);
+
+// Participantes (Matriz RACI)
+app.post("/api/proyectos/:id/participantes", asignarParticipante);
+
+// Acciones Jerárquicas
+app.post("/api/proyectos/:id/acciones", crearAccion);
+app.get("/api/proyectos/:id/acciones", obtenerArbolDeAcciones);
+
+// KPIs y Avances
+app.post("/api/kpis/:kpiId/registros", registrarAvanceKpi);
+
+// Áreas y Departamentos
+app.post("/api/areas", createArea);
+app.get("/api/areas/tree", getAreasTree);
+app.delete("/api/areas/:id", deleteArea);
+
+app.post("/api/live-sessions", createLiveSession);
+app.get("/api/live-sessions", getLiveSessions);
+app.get("/api/live-sessions/:id", getLiveSession);
+app.put("/api/live-sessions/:id/finish", finishLiveSession);
+app.delete("/api/live-sessions/:id", deleteLiveSession);
+app.post("/api/live-sessions/token", generateLiveKitToken);
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo`);

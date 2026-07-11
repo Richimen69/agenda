@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { sileo } from "sileo";
 import { CircleAlert } from "lucide-react";
-import { createLink } from "@services/shortlinks.api";
+import { createLink } from "@modules/marketing/services/shortlinks.api";
 
 export default function CreateShortLinkForm({ onLinkCreated, userId }) {
   const [formData, setFormData] = useState({ originalUrl: "", shortCode: "" });
