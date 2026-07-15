@@ -15,7 +15,7 @@ export default function PlacePanel({ users, onUsersChange, places }) {
     setIsSubmitting(true);
     try {
       const result = await createPlace({
-        nombre: name,
+        name,
         parentId: role || null,
       });
       if (result.success) {
