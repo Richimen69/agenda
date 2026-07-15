@@ -102,7 +102,7 @@ export default function PlacePanel({ users, onUsersChange, places }) {
                   <option value="">Selecciona un departamento</option>
                   {places.map((depto) => (
                     <option key={depto.id} value={depto.id}>
-                      {depto.nombre}
+                      {depto.name}
                     </option>
                   ))}
                 </select>
