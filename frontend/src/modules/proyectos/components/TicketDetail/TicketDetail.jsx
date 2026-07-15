@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlignLeft } from "lucide-react"; // Nuevo ícono para la descripción
-import DeleteConfirmModal from "@modules/proyectos/components/DeleteConfirmModal";
+import DeleteConfirmModal from "@shared/components/DeleteConfirmModal";
 import { Navigate } from "react-router-dom";
 
 import TicketHeader from "./TicketHeader";

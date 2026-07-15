@@ -6,18 +6,17 @@ import { createPlace } from "../services/places.api";
 
 export default function PlacePanel({ users, onUsersChange, places }) {
   const [name, setName] = useState("");
-  const [role, setRole] = useState("USER");
+  const [role, setRole] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isArea, setIsArea] = useState(false);
 
-  console.log(places);
   const handleCreate = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       const result = await createPlace({
         nombre: name,
-
+        parentId: role || null,
       });
       if (result.success) {
         sileo.success({
@@ -52,17 +51,6 @@ export default function PlacePanel({ users, onUsersChange, places }) {
     }
   };
 
-  const handleDelete = async (userId) => {
-    if (!window.confirm("¿Estás seguro de borrar este usuario?")) return;
-    try {
-      const result = await deleteUser(userId);
-      if (result.success) onUsersChange();
-      else alert(result.error);
-    } catch (error) {
-      alert("Error al borrar usuario");
-    }
-  };
-
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -74,7 +62,7 @@ export default function PlacePanel({ users, onUsersChange, places }) {
           <form onSubmit={handleCreate} className="space-y-4">
             <input
               type="text"
-              placeholder="Nombre completo"
+              placeholder="Ej. Sistemas"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -99,25 +87,37 @@ export default function PlacePanel({ users, onUsersChange, places }) {
                 >
                   <Check className="size-4.5 text-white m-auto" />
                 </div>
-                Front-end
               </label>
             </div>
             {isArea && (
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm font-semibold cursor-pointer"
-              >
-                <option value="USER">Usuario Normal</option>
-                <option value="ADMIN">Administrador</option>
-              </select>
+              <div className="flex flex-col gap-2 ml-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Departamento
+                </span>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm font-semibold cursor-pointer"
+                >
+                  <option value="">Selecciona un departamento</option>
+                  {places.map((depto) => (
+                    <option key={depto.id} value={depto.id}>
+                      {depto.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
             <button
               type="submit"
               disabled={isSubmitting}
               className="w-full py-3 bg-brand text-white text-sm font-bold rounded-xl hover:bg-brand-hover cursor-pointer transition-colors flex items-center justify-center gap-2"
             >
-              {isSubmitting ? "Creando..." : (isArea ? "Crear Area" : "Crear Departamento")}
+              {isSubmitting
+                ? "Creando..."
+                : isArea
+                  ? "Crear Area"
+                  : "Crear Departamento"}
             </button>
           </form>
         </div>
@@ -127,7 +127,25 @@ export default function PlacePanel({ users, onUsersChange, places }) {
           <h3 className="text-lg font-bold text-gray-900 mb-4">
             Departamentos Registrados
           </h3>
-          <div className="space-y-3"></div>
+          <div className="space-y-3">
+            {places.map((place) => (
+              <div
+                key={place.id}
+                className="flex items-center justify-between bg-gray-50 rounded-xl p-3"
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-gray-900">
+                    {place.name}
+                  </span>
+                  {place.children && place.children.length > 0 && (
+                    <span className="text-xs text-gray-500">
+                      {place.children.map((hijo) => hijo.name).join(", ")}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

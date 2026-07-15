@@ -22,24 +22,24 @@ model User {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 
-  createdTickets          Ticket[]               @relation("CreatedTickets")
-  assignedTickets         Ticket[]               @relation("AssignedTickets")
-  eventsCreated           Event[]                @relation("EventCreator")
-  eventsAttending         Event[]                @relation("EventAttendees")
-  reminders               Reminder[]
-  auditLogs               AuditLog[]
-  comments                Comment[]
-  subtasks                Subtask[]
-  shortLinks              ShortLink[]
-  proyectosCreados        Proyecto[]             @relation("ProyectoCreator")
-  participacionesProyecto ProyectoParticipante[]
-  accionesAsignadas       Accion[]               @relation("AccionOwner")
-  kpiRegistros            KpiRegistro[]
-  comentariosProyecto     ProyectoComment[]
-  areaId                  String?
-  area                    Area?                  @relation("UsuarioArea", fields: [areaId], references: [id], onDelete: SetNull)
-  advisorSessions    LiveSession[] @relation("AdvisorSessions")
-  technicianSessions LiveSession[] @relation("TechnicianSessions")
+  createdTickets     Ticket[]         @relation("CreatedTickets")
+  assignedTickets    Ticket[]         @relation("AssignedTickets")
+  eventsCreated      Event[]          @relation("EventCreator")
+  eventsAttending    Event[]          @relation("EventAttendees")
+  reminders          Reminder[]
+  auditLogs          AuditLog[]
+  comments           Comment[]
+  subtasks           Subtask[]
+  shortLinks         ShortLink[]
+  createdProjects    Project[]        @relation("ProjectCreator")
+  projectMemberships ProjectMember[]
+  assignedActions    ProjectAction[]  @relation("ActionOwner")
+  kpiRecords         KpiRecord[]
+  projectComments    ProjectComment[]
+  areaId             String?
+  area               Area?            @relation("UserArea", fields: [areaId], references: [id], onDelete: SetNull)
+  advisorSessions    LiveSession[]    @relation("AdvisorSessions")
+  technicianSessions LiveSession[]    @relation("TechnicianSessions")
 }
 
 // 2. TICKETS / PROYECTOS
@@ -91,18 +91,17 @@ model Event {
 
 // 4. RECORDATORIOS (Nuestra Cola Universal para WhatsApp)
 model Reminder {
-  id         String    @id @default(uuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticketId   String?
-  ticket     Ticket?   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  eventId    String?
-  event      Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  proyectoId String?
-  proyecto   Proyecto? @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-
-  accionId       String?
-  accion         Accion?        @relation(fields: [accionId], references: [id], onDelete: Cascade)
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketId       String?
+  ticket         Ticket?        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  eventId        String?
+  event          Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actionId       String?
+  action         ProjectAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
   scheduledAt    DateTime // Cuándo debe enviarse el WhatsApp
   messagePayload String         @db.Text // El texto exacto a enviar
   status         ReminderStatus @default(PENDING)
@@ -115,14 +114,13 @@ model Reminder {
 }
 
 model Comment {
-  id   String @id @default(uuid())
-  text String @db.Text
-
+  id       String  @id @default(uuid())
+  text     String  @db.Text
   ticketId String?
   ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  proyectoId String?
-  proyecto   Proyecto? @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -171,73 +169,61 @@ model ShortLink {
   @@index([shortCode])
 }
 
-model Proyecto {
-  id            String         @id @default(uuid())
-  titulo        String
-  descripcion   String?        @db.Text
-  estado        StatusProyecto @default(NUEVO)
-  fechaObjetivo DateTime
-
-  // CACHÉ DE KPIS (Roll-ups para Dashboard ultrarrápido)
-  avanceGlobal Float         @default(0)
-  salud        SaludProyecto @default(VERDE)
+model Project {
+  id             String        @id @default(uuid())
+  title          String
+  description    String?       @db.Text
+  status         ProjectStatus @default(NEW)
+  targetDate     DateTime
+  globalProgress Float         @default(0)
+  health         ProjectHealth @default(GREEN)
 
   creatorId String
-  creator   User   @relation("ProyectoCreator", fields: [creatorId], references: [id])
+  creator   User   @relation("ProjectCreator", fields: [creatorId], references: [id])
 
-  // Relaciones
-  participantes ProyectoParticipante[]
-  acciones      Accion[]
-  reminders     Reminder[]
-  comentarios   ProyectoComment[]
+  // Relations
+  members         ProjectMember[]
+  actions         ProjectAction[]
+  reminders       Reminder[]
+  projectComments ProjectComment[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   comments  Comment[]
 }
 
-model ProyectoParticipante {
-  id String @id @default(uuid())
-
-  proyectoId String
-  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  tipoRol RolParticipante // OWNER, SOPORTE, OBSERVER
-
-  areaId String
-  area   Area   @relation(fields: [areaId], references: [id])
+model ProjectMember {
+  id        String     @id @default(uuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleType  MemberRole // OWNER, SUPPORT, OBSERVER
+  areaId    String
+  area      Area       @relation(fields: [areaId], references: [id])
 
   createdAt DateTime @default(now())
 
-  // Un usuario no puede tener dos roles en el mismo proyecto
-  @@unique([proyectoId, userId])
+  @@unique([projectId, userId])
 }
 
-model Accion {
-  id     String @id @default(uuid())
-  titulo String
+model ProjectAction {
+  id        String   @id @default(uuid())
+  title     String
+  weight    Float    @default(1.0)
+  progress  Float    @default(0)
+  startDate DateTime
+  endDate   DateTime
 
-  // Matemáticas de Impacto
-  peso   Float @default(1.0)
-  avance Float @default(0) // CACHÉ de la acción en sí misma
+  ownerId   String?
+  owner     User?   @relation("ActionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  fechaInicio DateTime
-  fechaFin    DateTime
-
-  // Responsable directo (opcional si es una tarea agrupadora)
-  ownerId String?
-  owner   User?   @relation("AccionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-
-  proyectoId String
-  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-
-  // --- MAGIA: ÁRBOL JERÁRQUICO INFINITO ---
+  // Infinite Hierarchical Tree
   parentId String?
-  parent   Accion?  @relation("AccionHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children Accion[] @relation("AccionHierarchy")
+  parent   ProjectAction?  @relation("ActionHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children ProjectAction[] @relation("ActionHierarchy")
 
   kpis      Kpi[]
   reminders Reminder[]
@@ -247,56 +233,49 @@ model Accion {
 }
 
 model Kpi {
-  id     String  @id @default(uuid())
-  nombre String // Ej. 'Prospectos', 'Presupuesto gastado'
-  unidad String // Ej. 'clientes', 'MXN', '%'
-  meta   Float
-  tipo   TipoKpi // ACUMULABLE o ESTADO
+  id           String  @id @default(uuid())
+  name         String
+  unit         String
+  target       Float
+  type         KpiType
+  currentValue Float   @default(0)
 
-  valorActual Float @default(0)
-
-  accionId String
-  accion   Accion @relation(fields: [accionId], references: [id], onDelete: Cascade)
-
-  registros KpiRegistro[]
+  actionId String
+  action   ProjectAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  records  KpiRecord[]
 }
 
-model KpiRegistro {
-  id    String  @id @default(uuid())
-  valor Float
-  nota  String? @db.Text
-
-  kpiId String
-  kpi   Kpi    @relation(fields: [kpiId], references: [id], onDelete: Cascade)
-
+model KpiRecord {
+  id     String  @id @default(uuid())
+  value  Float
+  note   String? @db.Text
+  kpiId  String
+  kpi    Kpi     @relation(fields: [kpiId], references: [id], onDelete: Cascade)
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
 }
 
-// Bitácora clonada para aislarla 100% de los Tickets operativos
-model ProyectoComment {
-  id   String @id @default(uuid())
-  text String @db.Text
-
-  proyectoId String
-  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ProjectComment {
+  id        String  @id @default(uuid())
+  text      String  @db.Text
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 }
 
 model Area {
-  id            String                 @id @default(uuid())
-  nombre        String                 @unique
-  parentId      String?
-  parent        Area?                  @relation("AreaJerarquia", fields: [parentId], references: [id], onDelete: SetNull)
-  hijos         Area[]                 @relation("AreaJerarquia")
-  participantes ProyectoParticipante[]
-  usuarios      User[]                 @relation("UsuarioArea")
+  id       String          @id @default(uuid())
+  name     String          @unique
+  parentId String?
+  parent   Area?           @relation("AreaHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Area[]          @relation("AreaHierarchy")
+  members  ProjectMember[]
+  users    User[]          @relation("UserArea")
 }
 
 // =========================================================
@@ -304,34 +283,34 @@ model Area {
 // =========================================================
 
 model LiveSession {
-  id             String        @id @default(uuid())
-  roomName       String        // Ej: Placas o No. Orden
-  customerName   String
-  customerPhone  String?
-  vehicleModel   String?
+  id            String  @id @default(uuid())
+  roomName      String // Ej: Placas o No. Orden
+  customerName  String
+  customerPhone String?
+  vehicleModel  String?
 
   // Relación con el Asesor de Servicio (User creador)
-  advisorId      String?
-  advisor        User?         @relation("AdvisorSessions", fields: [advisorId], references: [id], onDelete: SetNull)
+  advisorId String?
+  advisor   User?   @relation("AdvisorSessions", fields: [advisorId], references: [id], onDelete: SetNull)
 
   // Relación con el Técnico asignado (User emisor)
-  technicianId   String?
-  technician     User?         @relation("TechnicianSessions", fields: [technicianId], references: [id], onDelete: SetNull)
+  technicianId String?
+  technician   User?   @relation("TechnicianSessions", fields: [technicianId], references: [id], onDelete: SetNull)
 
-  status         SessionStatus @default(WAITING)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  status    SessionStatus @default(WAITING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  recordings     LiveRecording[]
+  recordings LiveRecording[]
 }
 
 model LiveRecording {
-  id          String       @id @default(uuid())
-  sessionId   String
-  session     LiveSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  fileUrl     String       @db.Text
-  fileSize    BigInt?
-  createdAt   DateTime     @default(now())
+  id        String      @id @default(uuid())
+  sessionId String
+  session   LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  fileUrl   String      @db.Text
+  fileSize  BigInt?
+  createdAt DateTime    @default(now())
 }
 
 enum SessionStatus {
@@ -366,26 +345,26 @@ enum Priority {
   URGENTE
 }
 
-enum StatusProyecto {
-  NUEVO
-  EN_PROGRESO
-  REVISION
-  COMPLETADO
+enum ProjectStatus {
+  NEW         @map("NUEVO")
+  IN_PROGRESS @map("EN_PROGRESO")
+  REVIEW      @map("REVISION")
+  COMPLETED   @map("COMPLETADO")
 }
 
-enum SaludProyecto {
-  VERDE
-  AMARILLO
-  ROJO
+enum ProjectHealth {
+  GREEN  @map("VERDE")
+  YELLOW @map("AMARILLO")
+  RED    @map("ROJO")
 }
 
-enum RolParticipante {
-  OWNER
-  SOPORTE
-  OBSERVER
+enum MemberRole {
+  OWNER    @map("OWNER")
+  SUPPORT  @map("SOPORTE")
+  OBSERVER @map("OBSERVER")
 }
 
-enum TipoKpi {
-  ACUMULABLE // Ej: Ventas del mes (se suman los registros)
-  ESTADO // Ej: Porcentaje de instalación (se toma el último registro)
+enum KpiType {
+  ACCUMULABLE @map("ACUMULABLE")
+  STATUS      @map("ESTADO")
 }

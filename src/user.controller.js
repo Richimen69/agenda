@@ -30,7 +30,7 @@ export const login = async (req, res) => {
 // 2. CREAR USUARIO (Solo Admin)
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, whatsappPhone, role } = req.body;
+    const { name, email, password, whatsappPhone, role, areaId } = req.body;
 
     // Encriptamos la contraseña (10 saltos de seguridad)
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -42,6 +42,7 @@ export const createUser = async (req, res) => {
         password: hashedPassword,
         whatsappPhone,
         role: role || "USER",
+        areaId: areaId || null,
       },
     });
 
@@ -64,8 +65,8 @@ export const getUsers = async (req, res) => {
         id: true,
         area: {
           select: {
-            nombre: true,
-            parent: { select: { nombre: true } },
+            name: true,
+            parent: { select: { name: true } },
           },
         },
         name: true,
@@ -90,10 +91,12 @@ export const getUserById = async (req, res) => {
         id: true,
         name: true,
         email: true,
+        whatsappPhone: true,
         area: {
           select: {
-            nombre: true, // "Asesores de Ventas"
-            parent: { select: { nombre: true } }, // "Ventas"
+            name: true, // "Asesores de Ventas"
+            parent: { select: { name: true } }, // "Ventas"
+            id: true, // ID del área
           },
         },
       },
@@ -144,18 +147,21 @@ export const hardDeleteUser = async (req, res) => {
   }
 };
 
-export const asignarArea = async (req, res) => {
+export const editUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { areaId } = req.body;
+    const { name, email, role, areaId, whatsappPhone } = req.body;
 
     const user = await prisma.user.update({
       where: { id },
-      data: { areaId },
+      data: { name, email, role, areaId, whatsappPhone },
       select: {
         id: true,
         name: true,
-        area: { select: { id: true, nombre: true } },
+        email: true,
+        role: true,
+        whatsappPhone: true,
+        area: { select: { id: true, name: true } },
       },
     });
 

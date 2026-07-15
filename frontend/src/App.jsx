@@ -163,6 +163,7 @@ export default function App() {
                   authUser={authUser}
                   users={users}
                   onEventsChange={fetchData}
+                  places={places}
                 />
               }
             />

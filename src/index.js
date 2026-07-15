@@ -11,7 +11,11 @@ import {
 import prisma from "./prisma.js";
 import "./queue.js";
 import "./cron.js";
-import "./whatsapp.js";
+import {
+  detenerWhatsApp,
+  encenderWhatsApp,
+  getStatusWhatsApp,
+} from "./whatsapp.js";
 import {
   createTicket,
   updateTicketStatus,
@@ -31,7 +35,7 @@ import {
   getUsers,
   deleteUser,
   hardDeleteUser,
-  asignarArea,
+  editUser,
   getUserById,
 } from "./user.controller.js";
 import {
@@ -59,7 +63,6 @@ import {
   generateLiveKitToken,
 } from "./session.controller.js";
 
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -72,8 +75,35 @@ app.get("/api/users", getUsers);
 app.post("/api/users", createUser);
 app.delete("/api/users/:id", deleteUser);
 app.delete("/api/users/:id/hard", hardDeleteUser);
-app.patch("/api/users/:id/areas", asignarArea);
+app.patch("/api/users/:id", editUser);
 app.get("/api/users/:id", getUserById);
+
+app.post("/api/whatsapp/start", (req, res) => {
+  try {
+    const result = encenderWhatsApp();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/whatsapp/stop", async (req, res) => {
+  try {
+    const result = await detenerWhatsApp();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/api/whatsapp/status", (req, res) => {
+  try {
+    const status = getStatusWhatsApp();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Nuestra ruta principal de Agenda
 app.post("/api/events", createEvent);

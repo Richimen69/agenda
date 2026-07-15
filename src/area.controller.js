@@ -2,10 +2,10 @@ import prisma from "./prisma.js";
 
 export const createArea = async (req, res) => {
   try {
-    const { nombre, parentId } = req.body;
+    const { name, parentId } = req.body;
 
     const area = await prisma.area.create({
-      data: { nombre, parentId: parentId || null },
+      data: { name, parentId: parentId || null },
     });
 
     res.status(201).json({ success: true, data: area });
@@ -24,7 +24,7 @@ export const getAreasTree = async (req, res) => {
   try {
     const areas = await prisma.area.findMany({
       where: { parentId: null }, // solo raíces
-      include: { hijos: true },
+      include: { children: true },
     });
      res.status(200).json({ success: true, data: areas });
   } catch (error) {

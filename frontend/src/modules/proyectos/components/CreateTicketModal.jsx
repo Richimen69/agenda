@@ -75,7 +75,7 @@ export default function CreateTicketModal({
         {/* Header Fijo */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-layout-border bg-layout-surface">
           <h2 className="text-lg font-semibold text-content-main tracking-tight">
-            Crear Nuevo Proyecto
+            Crear Nueva Tarea
           </h2>
           <button
             onClick={onClose}
@@ -289,7 +289,7 @@ export default function CreateTicketModal({
                 Creando...
               </>
             ) : (
-              "Crear Proyecto"
+              "Crear Tarea"
             )}
           </button>
         </div>

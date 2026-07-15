@@ -2,15 +2,18 @@ import { useState } from "react";
 import { createUser, deleteUser } from "../services/users.api";
 import { Trash2, UserPlus, CircleAlert } from "lucide-react";
 import { sileo } from "sileo";
+import EditUserModal from "./EditUserModal";
 
-export default function AdminPanel({ users, onUsersChange }) {
+export default function AdminPanel({ users, onUsersChange, places }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [whats, setWhatsappPhone] = useState("");
   const [role, setRole] = useState("USER");
+  const [place, setPlace] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [modalEditUser, setModalEditUser] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const handleCreate = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -22,6 +25,7 @@ export default function AdminPanel({ users, onUsersChange }) {
         password,
         whatsappPhone,
         role,
+        areaId: place,
       });
       if (result.success) {
         sileo.success({
@@ -121,6 +125,33 @@ export default function AdminPanel({ users, onUsersChange }) {
               <option value="USER">Usuario Normal</option>
               <option value="ADMIN">Administrador</option>
             </select>
+            <div className="mt-4 text-xs text-gray-500">
+              <div className="flex flex-col gap-2 ml-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Departamento
+                </span>
+                <select
+                  value={place}
+                  onChange={(e) => setPlace(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-xl p-3 text-sm font-semibold cursor-pointer"
+                >
+                  <option value="">Selecciona un puesto</option>
+                  {places.map((depto) => (
+                    <optgroup key={depto.id} label={depto.name}>
+                      {depto.children.length > 0 ? (
+                        depto.children.map((hijo) => (
+                          <option key={hijo.id} value={hijo.id}>
+                            {hijo.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value={depto.id}>{depto.name}</option>
+                      )}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            </div>
             <button
               type="submit"
               disabled={isSubmitting}
@@ -139,8 +170,9 @@ export default function AdminPanel({ users, onUsersChange }) {
           <div className="space-y-3">
             {users.map((user) => (
               <div
+                onClick={() => setSelectedUserId(user.id)}
                 key={user.id}
-                className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl"
+                className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
               >
                 <div>
                   <p className="font-bold text-gray-900">
@@ -149,6 +181,11 @@ export default function AdminPanel({ users, onUsersChange }) {
                       className={`ml-2 text-[10px] px-2 py-1 rounded-full ${user.role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}
                     >
                       {user.role}
+                    </span>
+                    <span
+                      className={`ml-2 text-[10px] px-2 py-1 rounded-full ${user.area ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+                    >
+                      {user.area?.name || "Sin Departamento"}
                     </span>
                   </p>
                   <p className="text-xs text-gray-500">
@@ -166,6 +203,13 @@ export default function AdminPanel({ users, onUsersChange }) {
           </div>
         </div>
       </div>
+      <EditUserModal
+        isOpen={Boolean(selectedUserId)}
+        onClose={() => setSelectedUserId(null)}
+        userId={selectedUserId}
+        places={places}
+        onUsersChange={onUsersChange}
+      />
     </div>
   );
 }

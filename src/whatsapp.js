@@ -2,58 +2,68 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 
-// 1. Añadimos un "bandera" para saber el estado real del cliente
+// 1. Mantenemos la bandera de estado
 let isClientReady = false;
+let client = null; // Dejamos la variable mutable para poder reasignarla
 
-const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    // 2. Ampliamos los argumentos para darle máxima estabilidad a Puppeteer
-    args: [
-      '--no-sandbox', 
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage', // Vital si usas Docker o Linux
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  }
-});
+// 2. Envolvemos la inicialización en una función reutilizable
+const inicializarWhatsApp = () => {
+  console.log('[WhatsApp] Iniciando una nueva instancia del cliente...');
 
-client.on('qr', (qr) => {
-  console.log('\n[WhatsApp] Escanea este codigo QR para iniciar sesion:');
-  qrcode.generate(qr, { small: true });
-});
+  client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
+    }
+  });
 
-client.on('ready', () => {
-  console.log('[WhatsApp] Cliente conectado y listo para enviar mensajes!');
-  isClientReady = true; // El bot está listo para trabajar
-});
+  client.on('qr', (qr) => {
+    console.log('\n[WhatsApp] Escanea este código QR para iniciar sesión:');
+    qrcode.generate(qr, { small: true });
+  });
 
-client.on('auth_failure', (msg) => {
-  console.error('[WhatsApp] Error de autenticacion:', msg);
-  isClientReady = false;
-});
+  client.on('ready', () => {
+    console.log('[WhatsApp] Cliente conectado y listo para enviar mensajes!');
+    isClientReady = true;
+  });
 
-// 3. Agregamos el evento de autorecuperación
-client.on('disconnected', (reason) => {
-  console.log('[WhatsApp] Cliente desconectado. Razón:', reason);
-  isClientReady = false; // Bloqueamos nuevos envíos
-  
-  console.log('[WhatsApp] Reiniciando el cliente para recuperar la sesión...');
-  // Destruimos la instancia dañada y la volvemos a levantar
-  client.destroy().then(() => {
-    client.initialize();
-  }).catch(err => console.error('[WhatsApp] Error al destruir el cliente:', err));
-});
+  client.on('auth_failure', (msg) => {
+    console.error('[WhatsApp] Error de autenticación:', msg);
+    isClientReady = false;
+  });
 
-// Iniciamos el cliente
-client.initialize();
+  // 3. Autorecuperación real destruyendo y creando una NUEVA instancia
+  client.on('disconnected', async (reason) => {
+    console.log('[WhatsApp] Cliente desconectado. Razón:', reason);
+    isClientReady = false; 
+    
+    console.log('[WhatsApp] Limpiando la instancia dañada...');
+    try {
+      await client.destroy();
+      console.log('[WhatsApp] Instancia antigua destruida con éxito. Reiniciando...');
+      inicializarWhatsApp(); // <- Aquí llamamos a la función para crear un cliente nuevo
+    } catch (err) {
+      console.error('[WhatsApp] Error crítico al destruir el cliente viejo:', err);
+    }
+  });
 
+  client.initialize();
+};
+
+// Arrancamos el servicio por primera vez
+inicializarWhatsApp();
+
+// 4. Tu función de envío de mensajes queda intacta
 export const sendWhatsAppMessage = async (phone, message) => {
-  // 4. Verificamos que el cliente esté vivo antes de interactuar con Puppeteer
-  if (!isClientReady) {
+  if (!isClientReady || !client) {
     throw new Error('El cliente de WhatsApp no está listo o se encuentra desconectado.');
   }
 
@@ -63,7 +73,42 @@ export const sendWhatsAppMessage = async (phone, message) => {
     return response;
   } catch (error) {
     console.error(`[WhatsApp] Error al enviar mensaje a ${phone}:`, error);
-    // Lanzar el error es correcto para que BullMQ lo marque como "Failed" y aplique reintentos
     throw error;
   }
 };
+
+// ... (tu código anterior de inicializarWhatsApp)
+
+// Función para apagar el bot por completo
+export const detenerWhatsApp = async () => {
+  if (client) {
+    console.log('[WhatsApp] Apagando el cliente y cerrando navegador...');
+    try {
+      await client.destroy();
+      client = null;
+      isClientReady = false;
+      console.log('[WhatsApp] Bot completamente apagado.');
+    } catch (error) {
+      console.error('[WhatsApp] Error al intentar apagar el cliente:', error);
+    }
+  } else {
+    console.log('[WhatsApp] El bot ya estaba apagado.');
+  }
+};
+
+export const getStatusWhatsApp = () => {
+  return {
+    activo: client !== null,
+    listoParaEnviar: isClientReady
+  };
+};
+
+// Función para volver a encenderlo cuando quieras
+export const encenderWhatsApp = () => {
+  if (!client) {
+    inicializarWhatsApp();
+  } else {
+    console.log('[WhatsApp] El bot ya está encendido o iniciándose.');
+  }
+};
+
