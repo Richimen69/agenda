@@ -29,6 +29,8 @@ export default function PlacePanel({ users, onUsersChange, places }) {
             badge: "bg-white!",
           },
         });
+        setIsArea(false);
+        setRole("");
         setName("");
         onUsersChange();
       } else {

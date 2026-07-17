@@ -1,90 +1,343 @@
-import { useRef } from 'react';
-import { VideoTrack, useTracks, useLocalParticipant } from '@livekit/components-react';
-import { Track } from 'livekit-client';
-import { VideoOff, Mic, MicOff, Volume2, Maximize, Minimize } from 'lucide-react';
-import { useFullscreen } from '../hooks/useFullscreen';
+import { useRef, useState, useEffect } from "react";
+import { useRoomContext } from "@livekit/components-react";
+import { RoomEvent } from "livekit-client";
+import { getLiveSessionById } from "../services/live.api";
+import {
+  VideoTrack,
+  useTracks,
+  useLocalParticipant,
+} from "@livekit/components-react";
+import { Track } from "livekit-client";
+import {
+  VideoOff,
+  Mic,
+  MicOff,
+  Volume2,
+  Maximize,
+  Minimize,
+  Check,
+  PhoneCall,
+} from "lucide-react";
+import {
+  ConnectionError,
+  ConnectionLoading,
+  SessionFinished,
+} from "../components/ConnectionStatus";
 
-export function ClientLayout() {
+export function ClientLayout({ sessionId, isSpectator = false }) {
+  const room = useRoomContext();
   const cameraTracks = useTracks([Track.Source.Camera]);
   const videoTrack = cameraTracks[0];
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
 
+  const [session, setSession] = useState(null); // Almacenamos todo el objeto de la sesión
+  const [currentStageId, setCurrentStageId] = useState(null);
+
   const videoContainerRef = useRef(null);
-  const { isFullscreen, toggleFullscreen } = useFullscreen(videoContainerRef);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // 1. Cargar la sesión desde Postgres (Trae el tipo de servicio y sus etapas ordenadas)
+  useEffect(() => {
+    async function loadSession() {
+      if (!sessionId) return;
+      try {
+        const sessionData = await getLiveSessionById(sessionId);
+        setSession(sessionData);
+        console.log("w", sessionData);
+        setCurrentStageId(sessionData.currentStageId);
+      } catch (error) {
+        console.error("Error al cargar la sesión dinámica de Postgres:", error);
+      }
+    }
+    loadSession();
+  }, [sessionId]);
+
+  // 2. Escuchar cambios de etapa en tiempo real vía WebSockets (LiveKit)
+  useEffect(() => {
+    const handleDataReceived = (payload) => {
+      try {
+        const decoder = new TextDecoder();
+        const data = JSON.parse(decoder.decode(payload));
+        if (data.type === "stage_change") {
+          setCurrentStageId(data.stageId); // Actualiza la etapa instantáneamente
+        }
+      } catch (err) {
+        console.error("Error decodificando mensaje de datos:", err);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+    };
+  }, [room]);
+
+  // 3. Sincronizar el estado del fullscreen nativo del celular/navegador
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const element = videoContainerRef.current;
+    if (!element) return;
+
+    if (!isFullscreen) {
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen(); // Safari / iOS
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen(); // Safari / iOS
+      }
+    }
+  };
 
   const toggleMic = () => {
     localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
   };
 
-  return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950">
-      <div className="flex items-center justify-between p-4 border-b border-slate-800/80 bg-slate-900/20">
-        <div className="flex items-center gap-2">
-          {videoTrack && <span className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse"></span>}
-          <span className="font-bold tracking-wider text-xs md:text-sm text-slate-200">
-            TRANSMISIÓN DE TALLER EN CURSO
-          </span>
+  const stages = session?.serviceType?.stages || [];
+
+  // Si aún no carga los datos de la sesión, mostramos cargando de forma segura
+  if (!session || !session.serviceType || stages.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-slate-500 bg-[#f8f9fa] h-full">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Cargando mapa de servicio...
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Volume2 className="text-red-500 w-4 h-4 animate-bounce" />
-          <span className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400 font-bold uppercase tracking-wider">
-            Taller Toyota Live
-          </span>
+      </div>
+    );
+  }
+
+  // CÁLCULO DINÁMICO DEL PORCENTAJE DE AVANCE
+  const activeStageIdx = stages.findIndex((s) => s.id === currentStageId);
+  const percentage =
+    stages.length > 0
+      ? Math.round(((activeStageIdx + 1) / stages.length) * 100)
+      : 0;
+
+  if (session.status === "FINISHED") {
+    return <SessionFinished session={session} />;
+  }
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] p-4 gap-5 overflow-y-auto">
+      {/* =========================================================================
+          BLOQUE 1: ENCABEZADO SUPERIOR (Toyota Brand - Tema Blanco)
+          ========================================================================= */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+            <span className="text-white font-black text-xl">T</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-black text-gray-900 tracking-tight leading-tight">
+              {session.serviceType?.name}
+            </h1>
+            <p className="text-xs text-gray-500 mt-1">
+              <span className="font-bold text-gray-800">
+                {session.vehicleModel || ""}
+              </span>{" "}
+              ({session.roomName})
+            </p>
+          </div>
         </div>
       </div>
 
-      <div ref={videoContainerRef} className="flex-1 relative flex items-center justify-center bg-slate-950 overflow-hidden">
-        {videoTrack ? (
-          <>
-            <VideoTrack trackRef={videoTrack} className="w-full h-full" />
-            <button
-              onClick={toggleFullscreen}
-              className="absolute bottom-4 right-4 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 p-2.5 rounded-lg text-white transition-all cursor-pointer shadow-lg backdrop-blur-sm"
-            >
-              {isFullscreen ? <Minimize className="w-5 h-5 text-slate-200" /> : <Maximize className="w-5 h-5 text-slate-200" />}
-            </button>
-            {!isFullscreen && (
-              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-slate-900/85 border border-slate-800 px-3 py-1.5 rounded-full shadow-md backdrop-blur-sm pointer-events-none">
-                <span className="text-[10px] font-semibold text-slate-300 tracking-wider uppercase block text-center">
-                  🔄 Gira tu celular para pantalla completa
-                </span>
+      {/* =========================================================================
+          BLOQUE 2: TRANSMISIÓN DEL TALLER (Video + Controles)
+          ========================================================================= */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col overflow-hidden relative">
+        <div className="flex items-center justify-between p-4 border-b border-gray-150 bg-gray-50/50">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse"></span>
+            <span className="font-bold tracking-wider text-xs text-gray-800 uppercase">
+              Transmisión de Taller en Curso
+            </span>
+          </div>
+        </div>
+
+        {/* Reproductor de Video */}
+        <div
+          ref={videoContainerRef}
+          className="relative aspect-video flex items-center justify-center bg-slate-950 overflow-hidden"
+        >
+          {videoTrack ? (
+            <>
+              <VideoTrack trackRef={videoTrack} className="w-full h-full" />
+
+              {/* Usted está silenciado */}
+              <div className="absolute top-4 left-4 bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] text-orange-400 font-bold">
+                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full"></span>
+                {isMicrophoneEnabled
+                  ? "El tecnico puede oirte"
+                  : "Usted está silenciado"}
               </div>
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800/60 flex items-center justify-center mb-5">
-              <VideoOff className="text-slate-600 w-8 h-8" />
+
+              {/* Parámetros de Video */}
+              <div className="absolute top-4 right-4 bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg text-[10px] text-slate-300 font-semibold tracking-wide">
+                720P • 30 FPS • H.264
+              </div>
+
+              {/* Voz conectada */}
+              <div className="absolute bottom-4 left-4 flex items-center gap-2 text-[10px] text-emerald-400 font-bold bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                VOZ CONECTADA AL TÉCNICO
+              </div>
+
+              {/* Señal en tiempo real */}
+              <div className="absolute bottom-4 right-16 flex items-center gap-2 text-[10px] text-slate-300 font-bold bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg">
+                SEÑAL EN TIEMPO REAL
+              </div>
+
+              {/* Botón de Pantalla Completa */}
+              <button
+                onClick={toggleFullscreen}
+                className="absolute bottom-4 right-4 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 p-2.5 rounded-lg text-white transition-all cursor-pointer shadow-lg"
+              >
+                {isFullscreen ? (
+                  <Minimize className="w-4 h-4 text-slate-200" />
+                ) : (
+                  <Maximize className="w-4 h-4 text-slate-200" />
+                )}
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4">
+                <VideoOff className="text-slate-600 w-8 h-8" />
+              </div>
+              <span className="text-[10px] uppercase font-bold text-red-500 tracking-widest">
+                Fase del Servicio en Curso
+              </span>
+              <h3 className="text-base font-bold text-slate-200 tracking-tight mt-1 uppercase">
+                {session.currentStage?.name || "Mantenimiento activo"}
+              </h3>
+              <p className="text-xs text-slate-400 max-w-sm mt-2 leading-relaxed px-4">
+                "El técnico {session.technician?.name || "asignado"} está
+                trabajando en su vehículo. Hable con él en cualquier momento."
+              </p>
             </div>
-            <h3 className="text-base font-bold text-slate-200 tracking-tight">Señal de Video en Pausa</h3>
-            <p className="text-xs text-slate-400 max-w-md mt-2 leading-relaxed px-4">
-              El técnico se encuentra en una pausa breve de inspección estática o calibrando la cámara de bahía. El audio sigue disponible.
-            </p>
+          )}
+        </div>
+
+        {/* Botón de Muteo */}
+        {!isSpectator && (
+          <div className="p-4 border-t border-gray-150 bg-gray-50/30">
+            <button
+              onClick={toggleMic}
+              className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 px-4 rounded-xl transition-all cursor-pointer shadow-lg text-xs md:text-sm ${
+                isMicrophoneEnabled
+                  ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-950/10"
+                  : "bg-red-600 hover:bg-red-700 active:bg-red-800 shadow-red-950/10"
+              }`}
+            >
+              {isMicrophoneEnabled ? (
+                <>
+                  <Mic className="w-5 h-5 animate-pulse text-white" />
+                  <span>HABLANDO EN VIVO (PRESIONA PARA SILENCIAR)</span>
+                </>
+              ) : (
+                <>
+                  <MicOff className="w-5 h-5 text-white" />
+                  <span>HABLAR CON EL TÉCNICO POR AUDIO (LLAMAR)</span>
+                </>
+              )}
+            </button>
           </div>
         )}
       </div>
 
-      <div className="p-4 border-t border-slate-800/60 bg-slate-900/40">
-        <button
-          onClick={toggleMic}
-          className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 px-4 rounded-xl transition-all cursor-pointer shadow-lg text-xs md:text-sm ${
-            isMicrophoneEnabled
-              ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
-              : 'bg-red-600 hover:bg-red-700 active:bg-red-800'
-          }`}
-        >
-          {isMicrophoneEnabled ? (
-            <>
-              <Mic className="w-5 h-5 animate-pulse" />
-              <span>HABLANDO EN VIVO (PRESIONA PARA SILENCIAR)</span>
-            </>
-          ) : (
-            <>
-              <MicOff className="w-5 h-5 text-slate-200" />
-              <span>HABLAR CON EL TÉCNICO POR AUDIO (LLAMAR)</span>
-            </>
-          )}
-        </button>
+      {/* =========================================================================
+          BLOQUE 3: AVANCE GENERAL DEL MANTENIMIENTO (Progreso y Línea de Tiempo)
+          ========================================================================= */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col gap-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 tracking-tight">
+              Avance General
+            </h3>
+            <p className="text-[10px] text-gray-500 mt-0.5">
+              Porcentaje de puntos de inspección concluidos
+            </p>
+          </div>
+          {/* Porcentaje Dinámico */}
+          <span className="bg-red-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-md shadow-red-600/10 uppercase shrink-0">
+            {percentage}% Completado
+          </span>
+        </div>
+
+        {/* Barra de progreso visual */}
+        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+          <div
+            className="bg-red-600 h-2.5 rounded-full transition-all duration-500"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+
+        {/* Línea de tiempo secuencial de etapas */}
+        <div className="flex justify-between items-start text-[9px] md:text-[10px] gap-2 mt-2">
+          {stages.map((s, index) => {
+            const isCurrent = s.id === currentStageId;
+            const isPast =
+              s.order <=
+              (stages.find((item) => item.id === currentStageId)?.order || 1);
+
+            return (
+              <div
+                key={s.id}
+                className="flex flex-col items-center flex-1 text-center"
+              >
+                {/* Círculo indicador */}
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[8px] transition-all duration-300 ${
+                    isCurrent
+                      ? "bg-red-600 ring-4 ring-red-100 text-white scale-110"
+                      : isPast
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {isPast && !isCurrent ? (
+                    <Check className="w-3 h-3 font-black" />
+                  ) : (
+                    <span>{s.order}</span>
+                  )}
+                </div>
+                {/* Nombre de la etapa */}
+                <span
+                  className={`mt-2 font-bold tracking-tight max-w-[100px] leading-tight block ${
+                    isCurrent
+                      ? "text-red-500 font-extraboldScale-105"
+                      : "text-gray-500 font-semibold"
+                  }`}
+                >
+                  {s.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

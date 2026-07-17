@@ -40,20 +40,27 @@ export default function App() {
   // 1. INTERCEPCIÓN PÚBLICA (OMITIR LOGIN PARA CLIENTE Y TÉCNICO EN PRUEBAS)
   // =========================================================================
   const queryParams = new URLSearchParams(window.location.search);
-  const role = queryParams.get("role"); // "technician" o "client"
-  const room = queryParams.get("room"); // ID de la sesión (UUID)
+  const role = queryParams.get("role"); // "technician", "client" o "spectator"
+  const room = queryParams.get("room"); // ID de la sesión
   const label = queryParams.get("label") || "Servicio";
 
-  // Si tiene sala y rol, abre el reproductor sin validaciones de auth para pruebas rápidas
-  if (room && (role === "client" || role === "technician")) {
+  if (
+    room &&
+    (role === "client" || role === "technician" || role === "spectator")
+  ) {
     const isTechnician = role === "technician";
-    const participantName = isTechnician ? "Técnico" : "Cliente";
+    const isSpectator = role === "spectator";
+
+    let participantName = "Cliente";
+    if (isTechnician) participantName = "Técnico";
+    if (isSpectator) participantName = "Supervisor";
 
     return (
-      <LiveRoom 
-        roomName={room} 
-        participantName={`${participantName} (${label})`} 
-        isTechnician={isTechnician} 
+      <LiveRoom
+        roomName={room}
+        participantName={`${participantName} (${label})`}
+        isTechnician={isTechnician}
+        isSpectator={isSpectator} // <-- Pasamos el estado de espectador a la sala
       />
     );
   }
@@ -69,7 +76,6 @@ export default function App() {
       <Toaster position="top-center" />
       <BrowserRouter>
         <Routes>
-          
           {/* RUTA INTERNA: Consola de Transmisión del Técnico dentro de tu Layout */}
           <Route
             path="/"
@@ -91,10 +97,10 @@ export default function App() {
             <Route
               path="live-tech"
               element={
-                <LiveRoom 
-                  roomName={room} 
-                  participantName={`Técnico (${label})`} 
-                  isTechnician={true} 
+                <LiveRoom
+                  roomName={room}
+                  participantName={`Técnico (${label})`}
+                  isTechnician={true}
                 />
               }
             />

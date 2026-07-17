@@ -9,11 +9,10 @@ import { shareSessionViaWhatsApp } from '../utils/liveUrls';
 
 /**
  * Encapsula el fetch, filtrado y operaciones CRUD de las sesiones
- * de Toyota Live. Los componentes de UI (AdminLive y sus hijos) solo
- * consumen este hook, sin conocer detalles de la API.
+ * de Toyota Live. Los componentes de UI solo consumen este hook.
  *
  * onSessionsChange: callback opcional para notificar cambios globales
- * al componente padre de la app (mismo comportamiento que antes).
+ * al componente padre de la app.
  */
 export function useLiveSessions({ onSessionsChange } = {}) {
   const [sessions, setSessions] = useState([]);
@@ -49,7 +48,8 @@ export function useLiveSessions({ onSessionsChange } = {}) {
         customerPhone: formData.customerPhone || null,
         vehicleModel: formData.vehicleModel || null,
         advisorId, // Asignamos automáticamente el ID del usuario logueado
-        technicianId: formData.technicianId || null
+        technicianId: formData.technicianId || null,
+        serviceTypeId: formData.serviceTypeId
       });
 
       notifyChange();

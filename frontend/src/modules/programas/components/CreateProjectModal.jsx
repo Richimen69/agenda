@@ -1,207 +1,345 @@
 import { useState } from "react";
-import { X, Plus, Trash2, Check } from "lucide-react";
+import { X, Check, Star, ChevronDown, ChevronRight, Users } from "lucide-react";
 
 export default function CreateProjectModal({
   isOpen,
   onClose,
-  users,
   onSubmit,
   places,
 }) {
-  const [subtasks, setSubtasks] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [assigneeIds, setAssigneeIds] = useState([]);
-  const [dueDate, setDueDate] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+
+  // 👉 EL CEREBRO DEL MODAL
+  const [selectedUsers, setSelectedUsers] = useState([]); // Guarda IDs de humanos
+  const [ownerId, setOwnerId] = useState(null); // Guarda el ID del líder
+  const [expandedAreas, setExpandedAreas] = useState([]); // Controla el acordeón
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
-  const handleAssigneeChange = (placeId) => {
-    setAssigneeIds((prev) =>
-      prev.includes(placeId)
-        ? prev.filter((id) => id !== placeId)
-        : [...prev, placeId ],
+
+  // --- LÓGICA DE UI ---
+
+  const toggleArea = (areaId) => {
+    setExpandedAreas((prev) =>
+      prev.includes(areaId)
+        ? prev.filter((id) => id !== areaId)
+        : [...prev, areaId],
     );
   };
-  const handleAddSubtaskField = () =>
-    setSubtasks((prev) => [...prev, { title: "", assigneeId: "" }]);
-  const handleSubtaskChange = (index, field, value) => {
-    setSubtasks((prev) =>
-      prev.map((st, i) => (i === index ? { ...st, [field]: value } : st)),
-    );
+
+  const toggleUser = (userId) => {
+    setSelectedUsers((prev) => {
+      const isSelected = prev.includes(userId);
+      const next = isSelected
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId];
+
+      // Si deseleccionan al líder, apagamos la estrella
+      if (isSelected && ownerId === userId) setOwnerId(null);
+      return next;
+    });
   };
-  const handleRemoveSubtaskField = (index) =>
-    setSubtasks((prev) => prev.filter((_, i) => i !== index));
+
+  const toggleRoleGroup = (role) => {
+    if (!role.users || role.users.length === 0) return;
+
+    const roleUserIds = role.users.map((u) => u.id);
+    const isAllSelected = roleUserIds.every((id) => selectedUsers.includes(id));
+
+    if (isAllSelected) {
+      // Quitar a todos
+      setSelectedUsers((prev) =>
+        prev.filter((id) => !roleUserIds.includes(id)),
+      );
+      if (roleUserIds.includes(ownerId)) setOwnerId(null);
+    } else {
+      // Seleccionar a todos
+      setSelectedUsers((prev) =>
+        Array.from(new Set([...prev, ...roleUserIds])),
+      );
+    }
+  };
+
+  const handleSetOwner = (userId, e) => {
+    e.stopPropagation(); // Evita que se dispare el checkbox al darle a la estrella
+    if (!selectedUsers.includes(userId)) {
+      setSelectedUsers((prev) => [...prev, userId]); // Lo selecciona automáticamente
+    }
+    setOwnerId(ownerId === userId ? null : userId);
+  };
+
+  // --- LÓGICA DE ENVÍO AL BACKEND ---
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (assigneeIds.length === 0)
+    if (selectedUsers.length === 0)
       return alert("Selecciona al menos un responsable.");
+    if (!ownerId)
+      return alert(
+        "Debes asignar un Líder (haz clic en la estrella amarilla).",
+      );
+
     setIsSubmitting(true);
+
     try {
-      const result = await onSubmit({
+      const membersPayload = [];
+
+      // Mapeamos el JSON para armar el payload exacto
+      places.forEach((area) => {
+        area.children?.forEach((role) => {
+          role.users?.forEach((user) => {
+            if (selectedUsers.includes(user.id)) {
+              membersPayload.push({
+                userId: user.id,
+                areaId: area.id,
+                roleType: user.id === ownerId ? "OWNER" : "SUPPORT",
+                businessRole: role.name, // Ej: "Gerente de sistemas"
+              });
+            }
+          });
+        });
+      });
+
+      await onSubmit({
         title,
         description,
-        assigneeIds,
-        dueDate,
+        targetDate,
+        members: membersPayload,
       });
-    } catch {
-      alert("Error al crear el proyecto.");
+
+      // Limpieza
+      setTitle("");
+      setDescription("");
+      setTargetDate("");
+      setSelectedUsers([]);
+      setOwnerId(null);
+      onClose();
+    } catch (error) {
+      const detalleError = error.response?.data || error.message || error;
+      console.error("🔥 DETALLE DEL ERROR:", detalleError);
+      alert("Error: Revisa la consola (F12) para ver el detalle.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  function AssigneeOption({ id, label, isSelected, onToggle }) {
-    return (
-      <label
-        className={`flex items-center justify-between p-2.5 cursor-pointer transition-colors ${
-          isSelected ? "bg-brand-subtle/30" : "hover:bg-layout-hover"
-        }`}
-      >
-        <span
-          className={`text-sm ${isSelected ? "font-semibold text-content-main" : "text-content-muted"}`}
-        >
-          {label}
-        </span>
-        <div
-          className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-            isSelected
-              ? "bg-brand border-brand text-white"
-              : "border-layout-border bg-layout-surface"
-          }`}
-        >
-          {isSelected && <Check className="w-3 h-3" strokeWidth={3} />}
-        </div>
-        <input
-          type="checkbox"
-          className="hidden"
-          checked={isSelected}
-          onChange={onToggle}
-        />
-      </label>
-    );
-  }
-
   return (
-    // Overlay oscuro y blur
     <div className="fixed inset-0 bg-content-main/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      {/* Contenedor del Modal: Restringimos la altura para que scrollee internamente si es muy largo */}
       <div className="bg-layout-surface rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden border border-layout-border">
         {/* Header Fijo */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-layout-border bg-layout-surface">
           <h2 className="text-lg font-semibold text-content-main tracking-tight">
-            Crear Nuevo Proyecto
+            Crear Proyecto
           </h2>
           <button
             onClick={onClose}
-            className="text-content-muted cursor-pointer hover:text-content-main hover:bg-layout-hover p-1.5 rounded-md transition-colors"
+            className="text-content-muted hover:text-content-main p-1.5 rounded-md transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Body (Formulario scrolleable) */}
+        {/* Formulario Scrolleable */}
         <form
           id="create-project-form"
           onSubmit={handleSubmit}
           className="p-6 overflow-y-auto space-y-5 custom-scrollbar"
         >
-          {/* Fila 1: Título */}
           <div>
             <label className="block text-sm font-medium text-content-main mb-1.5">
-              Título del Proyecto <span className="text-status-danger">*</span>
+              Título del Proyecto *
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej: Rediseño de la intranet corporativa"
-              className="w-full bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-shadow"
+              placeholder="Ej: Implementación de ERP"
+              className="w-full bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main focus:ring-1 focus:ring-brand focus:border-brand outline-none"
             />
           </div>
 
-          {/* Fila 2: Descripción */}
           <div>
             <label className="block text-sm font-medium text-content-main mb-1.5">
-              Descripción detallada{" "}
-              <span className="text-status-danger">*</span>
+              Descripción *
             </label>
             <textarea
               required
               rows="3"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Define el alcance y los objetivos del proyecto..."
-              className="w-full bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-shadow resize-none"
+              className="w-full bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main focus:ring-1 focus:ring-brand outline-none resize-none"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-content-main mb-1.5">
-                Fecha Límite
-              </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full cursor-pointer bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-shadow"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-content-main mb-1.5">
+              Fecha Meta *
+            </label>
+            <input
+              type="date"
+              required
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="w-full bg-layout-surface border border-layout-border rounded-md px-3 py-2 text-sm text-content-main focus:ring-1 focus:ring-brand outline-none"
+            />
           </div>
 
-          {/* Fila 4: Responsables (Lista estilo Enterprise con Avatares) */}
+          {/* MATRIZ DE PARTICIPANTES (El Árbol) */}
           <div>
             <div className="flex justify-between items-end mb-1.5">
               <label className="block text-sm font-medium text-content-main">
-                Equipo Asignado <span className="text-status-danger">*</span>
+                Equipo Asignado *
               </label>
               <span className="text-xs text-content-muted font-medium">
-                {assigneeIds.length} seleccionado(s)
+                {selectedUsers.length} participante(s) |{" "}
+                {ownerId ? "1 Líder" : "Sin Líder"}
               </span>
             </div>
 
-            <div className="border border-layout-border rounded-md max-h-40 overflow-y-auto divide-y divide-layout-border bg-layout-surface shadow-inner">
-              {places.map((depto) => (
-                <div key={depto.id}>
-                  {depto.hijos.length > 0 ? (
-                    <>
-                      <div className="px-2.5 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-content-muted">
-                        {depto.nombre}
+            <div className="border border-layout-border rounded-md max-h-56 overflow-y-auto bg-layout-surface shadow-inner custom-scrollbar">
+              {places.map((area) => {
+                const isExpanded = expandedAreas.includes(area.id);
+                // Solo mostrar áreas que tengan puestos con usuarios
+                const hasUsers = area.children?.some(
+                  (role) => role.users && role.users.length > 0,
+                );
+
+                if (!hasUsers) return null; // Ocultamos áreas vacías (Ej. Gerencia)
+
+                return (
+                  <div
+                    key={area.id}
+                    className="border-b border-layout-border last:border-none"
+                  >
+                    {/* Header del Departamento */}
+                    <button
+                      type="button"
+                      onClick={() => toggleArea(area.id)}
+                      className="w-full flex items-center gap-2 px-3 py-2 bg-layout-hover/50 hover:bg-layout-hover text-left transition-colors"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-content-muted" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-content-muted" />
+                      )}
+                      <span className="text-sm font-semibold text-content-main">
+                        {area.name}
+                      </span>
+                    </button>
+
+                    {/* Contenido Expandido (Puestos y Usuarios) */}
+                    {isExpanded && (
+                      <div className="bg-layout-surface py-1">
+                        {area.children.map((role) => {
+                          if (!role.users || role.users.length === 0)
+                            return null;
+
+                          const roleUserIds = role.users.map((u) => u.id);
+                          const isAllRoleSelected = roleUserIds.every((id) =>
+                            selectedUsers.includes(id),
+                          );
+
+                          return (
+                            <div key={role.id} className="mb-2">
+                              {/* Header del Puesto (Permite seleccionar a todos) */}
+                              <label className="flex items-center gap-2 px-6 py-1.5 cursor-pointer hover:bg-layout-hover transition-colors">
+                                <input
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={isAllRoleSelected}
+                                  onChange={() => toggleRoleGroup(role)}
+                                />
+                                <div
+                                  className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${isAllRoleSelected ? "bg-brand border-brand text-white" : "border-layout-border bg-layout-surface"}`}
+                                >
+                                  {isAllRoleSelected && (
+                                    <Check
+                                      className="w-2.5 h-2.5"
+                                      strokeWidth={3}
+                                    />
+                                  )}
+                                </div>
+                                <span className="text-xs font-bold text-content-muted uppercase tracking-wider">
+                                  {role.name}
+                                </span>
+                                <Users className="w-3 h-3 text-content-muted ml-auto" />
+                              </label>
+
+                              {/* Los Humanos */}
+                              {role.users.map((user) => {
+                                const isUserSelected = selectedUsers.includes(
+                                  user.id,
+                                );
+                                const isOwner = ownerId === user.id;
+
+                                return (
+                                  <label
+                                    key={user.id}
+                                    className={`flex items-center gap-3 px-8 py-2 cursor-pointer transition-colors ${isUserSelected ? "bg-brand-subtle/20" : "hover:bg-layout-hover"}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="hidden"
+                                      checked={isUserSelected}
+                                      onChange={() => toggleUser(user.id)}
+                                    />
+
+                                    <div
+                                      className={`w-4 h-4 rounded border flex items-center justify-center ${isUserSelected ? "bg-brand border-brand text-white" : "border-layout-border bg-layout-surface"}`}
+                                    >
+                                      {isUserSelected && (
+                                        <Check
+                                          className="w-3 h-3"
+                                          strokeWidth={3}
+                                        />
+                                      )}
+                                    </div>
+
+                                    <span
+                                      className={`text-sm flex-1 ${isUserSelected ? "font-semibold text-content-main" : "text-content-muted"}`}
+                                    >
+                                      {user.name}
+                                    </span>
+
+                                    {/* LA ESTRELLA DE LÍDER (OWNER) */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) =>
+                                        handleSetOwner(user.id, e)
+                                      }
+                                      className="p-1 rounded hover:bg-layout-border transition-colors group"
+                                      title="Marcar como Líder de Proyecto"
+                                    >
+                                      <Star
+                                        className={`w-4 h-4 ${isOwner ? "fill-yellow-400 text-yellow-400" : "text-content-muted/50 group-hover:text-yellow-400"}`}
+                                      />
+                                    </button>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
                       </div>
-                      {depto.hijos.map((hijo) => (
-                        <AssigneeOption
-                          key={hijo.id}
-                          id={hijo.id}
-                          label={hijo.nombre}
-                          isSelected={assigneeIds.includes(hijo.id)}
-                          onToggle={() => handleAssigneeChange(hijo.id)}
-                        />
-                      ))}
-                    </>
-                  ) : (
-                    <AssigneeOption
-                      id={depto.id}
-                      label={depto.nombre}
-                      isSelected={assigneeIds.includes(depto.id)}
-                      onToggle={() => handleAssigneeChange(depto.id)}
-                    />
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </form>
 
-        {/* Footer Fijo con Acciones (Primary / Secondary) */}
+        {/* Footer */}
         <div className="flex justify-end items-center gap-3 px-6 py-4 border-t border-layout-border bg-layout-app/50">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-semibold text-content-main bg-layout-surface border border-layout-border rounded-md hover:bg-layout-hover transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 text-sm font-semibold text-content-main bg-layout-surface border border-layout-border rounded-md hover:bg-layout-hover"
           >
             Cancelar
           </button>
@@ -209,34 +347,9 @@ export default function CreateProjectModal({
             form="create-project-form"
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2 text-sm font-semibold text-white bg-brand rounded-md hover:bg-brand-hover focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-all disabled:opacity-60 cursor-pointer flex items-center gap-2"
+            className="px-5 py-2 text-sm font-semibold text-white bg-brand rounded-md hover:opacity-90 flex items-center gap-2"
           >
-            {isSubmitting ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Creando...
-              </>
-            ) : (
-              "Crear Tarea"
-            )}
+            {isSubmitting ? "Creando..." : "Crear Proyecto"}
           </button>
         </div>
       </div>

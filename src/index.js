@@ -46,21 +46,25 @@ import {
   deleteLink,
 } from "./shortlink.controller.js";
 import {
-  crearProyecto,
+  addProject,
   obtenerDashboard,
-  obtenerProyectoPorId,
-} from "./proyecto.controller.js";
+  getProjects,
+  getProjectById,
+} from "./project.controller.js";
 import { crearAccion, obtenerArbolDeAcciones } from "./accion.controller.js";
-import { asignarParticipante } from "./participante.controller.js";
+import { asignarParticipante } from "./participant.controller.js";
 import { registrarAvanceKpi } from "./kpi.controller.js";
 import { createArea, getAreasTree, deleteArea } from "./area.controller.js";
 import {
+  getServiceTypes,
   getLiveSessions,
   getLiveSession,
   createLiveSession,
+  updateLiveSessionStage,
   finishLiveSession,
   deleteLiveSession,
   generateLiveKitToken,
+  createServiceType
 } from "./session.controller.js";
 
 const app = express();
@@ -132,16 +136,16 @@ app.get("/s/:shortCode", redirectLink);
 app.delete("/api/links/:id", deleteLink);
 
 // Proyectos y Dashboard
-app.post("/api/proyectos", crearProyecto);
-app.get("/api/proyectos/dashboard", obtenerDashboard);
-app.get("/api/proyectos/:id", obtenerProyectoPorId);
+app.post("/api/projects", addProject);
+app.get("/api/projects", getProjects);         
+app.get("/api/projects/:id", getProjectById);
 
 // Participantes (Matriz RACI)
-app.post("/api/proyectos/:id/participantes", asignarParticipante);
+app.post("/api/projects/:id/participantes", asignarParticipante);
 
 // Acciones Jerárquicas
-app.post("/api/proyectos/:id/acciones", crearAccion);
-app.get("/api/proyectos/:id/acciones", obtenerArbolDeAcciones);
+app.post("/api/projects/:id/acciones", crearAccion);
+app.get("/api/projects/:id/acciones", obtenerArbolDeAcciones);
 
 // KPIs y Avances
 app.post("/api/kpis/:kpiId/registros", registrarAvanceKpi);
@@ -151,12 +155,15 @@ app.post("/api/areas", createArea);
 app.get("/api/areas/tree", getAreasTree);
 app.delete("/api/areas/:id", deleteArea);
 
+app.get("/api/service-types", getServiceTypes); // Obtener catálogo de servicios y etapas
 app.post("/api/live-sessions", createLiveSession);
 app.get("/api/live-sessions", getLiveSessions);
 app.get("/api/live-sessions/:id", getLiveSession);
-app.put("/api/live-sessions/:id/finish", finishLiveSession);
+app.patch("/api/live-sessions/:id/stage", updateLiveSessionStage); // Actualizar progreso
+app.patch("/api/live-sessions/:id/finish", finishLiveSession); // Finalizar (Usa PATCH para ser consistente con tus tickets)
 app.delete("/api/live-sessions/:id", deleteLiveSession);
 app.post("/api/live-sessions/token", generateLiveKitToken);
+app.post("/api/service-types", createServiceType);
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo`);

@@ -8,26 +8,26 @@ import {
   Filter,
 } from "lucide-react";
 import CreateProjectModal from "../components/CreateProjectModal";
-import { createProject } from "../services/proyectos.api";
+import { createProject } from "../services/projects.api";
+import ProjectList from "../components/ProjectList";
 
 export default function ProyectosPage({ users, authUser, events, places }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCreateProject = async ({
-        title,
-        description,
-        assigneeIds,
-        dueDate,
+    title,
+    description,
+    members,
+    targetDate,
   }) => {
     const result = await createProject({
       title,
       description,
-      creatorId: activeUserId,
-      assigneeIds,
-      dueDate,
-      priority,
-      subtasks,
+      targetDate,
+      creatorId: authUser.id,
+      members,
     });
+
     return result;
   };
   return (
@@ -48,11 +48,13 @@ export default function ProyectosPage({ users, authUser, events, places }) {
           <Plus className="w-4 h-4" /> Nuevo Proyecto
         </button>
       </div>
+      <ProjectList />
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         users={users}
         places={places}
+        onSubmit={handleCreateProject}
       />
     </div>
   );

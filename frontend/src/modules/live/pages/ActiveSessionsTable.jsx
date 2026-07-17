@@ -1,4 +1,4 @@
-import { getSessionUrls, shareSessionViaWhatsApp } from '../utils/liveUrls';
+import { getSessionUrls, shareSessionViaWhatsApp, copySupervisorLink } from '../utils/liveUrls';
 
 export function ActiveSessionsTable({ sessions, onFinish }) {
   if (sessions.length === 0) {
@@ -15,7 +15,8 @@ export function ActiveSessionsTable({ sessions, onFinish }) {
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50 text-gray-400 text-xs uppercase font-bold">
             <th className="p-4">Identificador</th>
-            <th className="p-4">Cliente</th>
+            <th className="p-4">Cliente / Auto</th>
+            <th className="p-4">Servicio / Etapa Actual</th>
             <th className="p-4">Técnico</th>
             <th className="p-4">Enlaces de Monitoreo</th>
             <th className="p-4 text-right">Acciones</th>
@@ -36,15 +37,23 @@ function ActiveSessionRow({ session, onFinish }) {
 
   return (
     <tr className="hover:bg-gray-50">
-      <td className="p-4 font-semibold text-gray-900">
-        {session.roomName}
+      <td className="p-4 font-semibold text-gray-900">{session.roomName}</td>
+      <td className="p-4 text-gray-600">
+        <div className="font-bold">{session.customerName}</div>
         {session.vehicleModel && (
-          <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold ml-2">
+          <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded">
             {session.vehicleModel}
           </span>
         )}
       </td>
-      <td className="p-4 text-gray-600">{session.customerName}</td>
+      <td className="p-4">
+        <div className="text-gray-900 font-semibold">{session.serviceType?.name || 'No definido'}</div>
+        {session.currentStage && (
+          <span className="text-[10px] bg-red-50 text-red-600 border border-red-100 font-bold px-2 py-0.5 rounded-full mt-1 inline-block uppercase">
+            ● {session.currentStage.name}
+          </span>
+        )}
+      </td>
       <td className="p-4 text-gray-500 font-semibold">{session.technician?.name || 'No asignado'}</td>
       <td className="p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs">
@@ -61,6 +70,15 @@ function ActiveSessionRow({ session, onFinish }) {
           >
             Link para Cliente
           </a>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-bold text-[10px] uppercase text-gray-400 w-16">Auditoría</span>
+          <button
+            onClick={() => copySupervisorLink(session)}
+            className="text-red-600 hover:underline text-left cursor-pointer"
+          >
+            Copiar Link de Supervisor 📋
+          </button>
         </div>
       </td>
       <td className="p-4 text-right space-x-2">

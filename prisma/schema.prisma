@@ -202,7 +202,8 @@ model ProjectMember {
   areaId    String
   area      Area       @relation(fields: [areaId], references: [id])
 
-  createdAt DateTime @default(now())
+  businessRole String?
+  createdAt    DateTime @default(now())
 
   @@unique([projectId, userId])
 }
@@ -284,24 +285,27 @@ model Area {
 
 model LiveSession {
   id            String  @id @default(uuid())
-  roomName      String // Ej: Placas o No. Orden
+  roomName      String
   customerName  String
   customerPhone String?
   vehicleModel  String?
 
-  // Relación con el Asesor de Servicio (User creador)
-  advisorId String?
-  advisor   User?   @relation("AdvisorSessions", fields: [advisorId], references: [id], onDelete: SetNull)
+  // RELACIÓN CON EL TIPO DE SERVICIO SELECCIONADO
+  serviceTypeId String?
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
 
-  // Relación con el Técnico asignado (User emisor)
+  // RELACIÓN CON LA ETAPA ACTUAL (ID de la tabla ServiceStage)
+  currentStageId String?
+  currentStage   ServiceStage? @relation("CurrentStage", fields: [currentStageId], references: [id], onDelete: SetNull)
+
+  advisorId    String?
+  advisor      User?           @relation("AdvisorSessions", fields: [advisorId], references: [id], onDelete: SetNull)
   technicianId String?
-  technician   User?   @relation("TechnicianSessions", fields: [technicianId], references: [id], onDelete: SetNull)
-
-  status    SessionStatus @default(WAITING)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  recordings LiveRecording[]
+  technician   User?           @relation("TechnicianSessions", fields: [technicianId], references: [id], onDelete: SetNull)
+  status       SessionStatus   @default(WAITING)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  recordings   LiveRecording[]
 }
 
 model LiveRecording {
@@ -311,6 +315,35 @@ model LiveRecording {
   fileUrl   String      @db.Text
   fileSize  BigInt?
   createdAt DateTime    @default(now())
+}
+
+model ServiceType {
+  id          String   @id @default(uuid())
+  name        String   @unique // Ej. 'Mantenimiento Express 60k', 'Diagnóstico Eléctrico'
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stages   ServiceStage[] // Relación con sus etapas configuradas
+  sessions LiveSession[] // Sesiones asociadas a este tipo de servicio
+}
+
+model ServiceStage {
+  id    String @id @default(uuid())
+  name  String // Ej. 'Recepción', 'Alineación', 'Lavado', 'Listo'
+  order Int // Secuencia numérica (1, 2, 3...) de la etapa en este servicio
+
+  serviceTypeId String
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  // Sesiones que se encuentran actualmente en esta etapa específica
+  currentSessions LiveSession[] @relation("CurrentStage")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Evita que existan dos etapas con el mismo orden en el mismo tipo de servicio
+  @@unique([serviceTypeId, order])
 }
 
 enum SessionStatus {

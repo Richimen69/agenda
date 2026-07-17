@@ -5,7 +5,8 @@ const EMPTY_FORM = {
   customerName: '',
   customerPhone: '',
   vehicleModel: '',
-  technicianId: ''
+  technicianId: '',
+  serviceTypeId: ''
 };
 
 /**
@@ -13,7 +14,7 @@ const EMPTY_FORM = {
  * useLiveSessions.createSession). onSuccess se dispara después del alert
  * de éxito, útil para que el padre cambie de tab.
  */
-export function CreateSessionForm({ users, loading, onSubmit, onSuccess }) {
+export function CreateSessionForm({ users, serviceTypes, loading, onSubmit, onSuccess }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   const updateField = (field) => (e) => {
@@ -22,14 +23,14 @@ export function CreateSessionForm({ users, loading, onSubmit, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.roomName || !formData.customerName) {
-      alert('Campos obligatorios incompletos');
+    if (!formData.roomName || !formData.customerName || !formData.serviceTypeId) {
+      alert('Por favor llena los campos obligatorios y selecciona un servicio');
       return;
     }
 
     const result = await onSubmit(formData);
     if (result.success) {
-      alert('Sesión registrada exitosamente.');
+      alert('Sesión registrada y vinculada a su flujo de etapas.');
       setFormData(EMPTY_FORM);
       if (onSuccess) onSuccess();
     } else {
@@ -66,6 +67,24 @@ export function CreateSessionForm({ users, loading, onSubmit, onSuccess }) {
             onChange={updateField('customerName')}
             className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-red-600"
           />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
+            Seleccionar Tipo de Servicio (Dinámico)
+          </label>
+          <select
+            required
+            value={formData.serviceTypeId}
+            onChange={updateField('serviceTypeId')}
+            className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-red-600 cursor-pointer"
+          >
+            <option value="">-- Elige un Servicio para cargar sus Etapas --</option>
+            {serviceTypes.map((service) => (
+              <option key={service.id} value={service.id}>
+                {service.name} ({service.stages.length} etapas)
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">

@@ -6,7 +6,7 @@ import {
   updateTicketStatus,
   addTicketComment,
   getPlaces,
-} from "../services/api";
+} from "@services/api";
 
 export function useAppData(authUser) {
   const [users, setUsers] = useState([]);
@@ -14,6 +14,7 @@ export function useAppData(authUser) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [places, setPlaces] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;

@@ -8,8 +8,10 @@ export const getLiveSessions = async (req, res) => {
       include: {
         advisor: { select: { id: true, name: true, email: true } },
         technician: { select: { id: true, name: true, email: true } },
+        serviceType: true,
+        currentStage: true
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' }
     });
     res.json(sessions);
   } catch (error) {
@@ -28,7 +30,15 @@ export const getLiveSession = async (req, res) => {
       include: {
         advisor: { select: { id: true, name: true, email: true } },
         technician: { select: { id: true, name: true, email: true } },
-      },
+        serviceType: {
+          include: {
+            stages: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        },
+        currentStage: true
+      }
     });
 
     if (!session) {
@@ -42,23 +52,28 @@ export const getLiveSession = async (req, res) => {
   }
 };
 
+
 // 3. Crear una nueva sesión
 export const createLiveSession = async (req, res) => {
   try {
-    const {
-      roomName,
-      customerName,
-      customerPhone,
-      vehicleModel,
-      advisorId,
+    const { 
+      roomName, 
+      customerName, 
+      customerPhone, 
+      vehicleModel, 
+      advisorId, 
       technicianId,
+      serviceTypeId
     } = req.body;
 
-    if (!roomName || !customerName) {
-      return res
-        .status(400)
-        .json({ error: "Faltan campos obligatorios: roomName o customerName" });
+    if (!roomName || !customerName || !serviceTypeId) {
+      return res.status(400).json({ error: "roomName, customerName y serviceTypeId son requeridos" });
     }
+
+    // Buscamos automáticamente la primera etapa de ese servicio (order: 1)
+    const initialStage = await prisma.serviceStage.findFirst({
+      where: { serviceTypeId, order: 1 }
+    });
 
     const session = await prisma.liveSession.create({
       data: {
@@ -68,13 +83,15 @@ export const createLiveSession = async (req, res) => {
         vehicleModel: vehicleModel || null,
         advisorId: advisorId || null,
         technicianId: technicianId || null,
-        status: "WAITING",
-      },
+        serviceTypeId,
+        currentStageId: initialStage ? initialStage.id : null,
+        status: "WAITING"
+      }
     });
 
     res.status(201).json(session);
   } catch (error) {
-    console.error("Error al crear sesión en vivo:", error);
+    console.error("Error al crear sesión en vivo dinámica:", error);
     res.status(500).json({ error: "Failed to create live session" });
   }
 };
@@ -86,7 +103,7 @@ export const finishLiveSession = async (req, res) => {
 
     const session = await prisma.liveSession.update({
       where: { id },
-      data: { status: "FINISHED" },
+      data: { status: "FINISHED" }
     });
 
     res.json({ message: "Live session marked as finished", session });
@@ -102,7 +119,7 @@ export const deleteLiveSession = async (req, res) => {
     const { id } = req.params;
 
     await prisma.liveSession.delete({
-      where: { id },
+      where: { id }
     });
 
     res.json({ message: "Live session deleted successfully" });
@@ -118,31 +135,26 @@ export const generateLiveKitToken = async (req, res) => {
     const { roomName, participantName, isTechnician } = req.body;
 
     if (!roomName || !participantName) {
-      return res
-        .status(400)
-        .json({ error: "roomName y participantName son requeridos" });
+      return res.status(400).json({ error: "roomName y participantName son requeridos" });
     }
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
 
     if (!apiKey || !apiSecret) {
-      return res
-        .status(500)
-        .json({ error: "Configuración de LiveKit incompleta en el servidor" });
+      return res.status(500).json({ error: "Configuración de LiveKit incompleta en el servidor" });
     }
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: participantName,
     });
 
-    // Otorgamos permisos estándar de lectura y escritura para la sala.
-    // Esto garantiza compatibilidad del 100% con todas las versiones del SDK de LiveKit.
-    at.addGrant({
-      roomJoin: true,
-      room: roomName,
-      canPublish: true,
-      canSubscribe: true,
+    // Otorgamos permisos estándar de lectura y escritura para la sala
+    at.addGrant({ 
+      roomJoin: true, 
+      room: roomName, 
+      canPublish: true, 
+      canSubscribe: true 
     });
 
     const token = await at.toJwt();
@@ -150,5 +162,68 @@ export const generateLiveKitToken = async (req, res) => {
   } catch (error) {
     console.error("Error al generar token de LiveKit:", error);
     res.status(500).json({ error: "Failed to generate video token" });
+  }
+};
+export const getServiceTypes = async (req, res) => {
+  try {
+    const serviceTypes = await prisma.serviceType.findMany({
+      include: {
+        stages: {
+          orderBy: { order: 'asc' } // Trae las etapas ordenadas secuencialmente
+        }
+      }
+    });
+    res.json(serviceTypes);
+  } catch (error) {
+    console.error("Error al obtener tipos de servicio:", error);
+    res.status(500).json({ error: "Failed to fetch service types" });
+  }
+};
+
+export const updateLiveSessionStage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentStageId } = req.body; // Recibe el ID de la tabla ServiceStage
+
+    const session = await prisma.liveSession.update({
+      where: { id },
+      data: { currentStageId }
+    });
+
+    res.json({ message: "Service stage updated successfully", session });
+  } catch (error) {
+    console.error("Error al actualizar la etapa del servicio:", error);
+    res.status(500).json({ error: "Failed to update service stage" });
+  }
+};
+
+export const createServiceType = async (req, res) => {
+  try {
+    const { name, description, stages } = req.body; // 'stages' es un arreglo de textos: ['Recepción', 'Lavado', ...]
+
+    if (!name || !stages || stages.length === 0) {
+      return res.status(400).json({ error: "El nombre del servicio y al menos una etapa son obligatorios" });
+    }
+
+    const serviceType = await prisma.serviceType.create({
+      data: {
+        name,
+        description: description || null,
+        stages: {
+          create: stages.map((stageName, index) => ({
+            name: stageName,
+            order: index + 1 // Asigna automáticamente el orden secuencial (1, 2, 3...)
+          }))
+        }
+      },
+      include: {
+        stages: { orderBy: { order: 'asc' } }
+      }
+    });
+
+    res.status(201).json(serviceType);
+  } catch (error) {
+    console.error("Error al crear tipo de servicio dinámico:", error);
+    res.status(500).json({ error: "Failed to create service type" });
   }
 };

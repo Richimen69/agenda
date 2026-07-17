@@ -10,12 +10,10 @@ export const createArea = async (req, res) => {
 
     res.status(201).json({ success: true, data: area });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "El área ya existe o los datos son inválidos",
-      });
+    res.status(500).json({
+      success: false,
+      error: "El área ya existe o los datos son inválidos",
+    });
   }
 };
 
@@ -23,12 +21,37 @@ export const createArea = async (req, res) => {
 export const getAreasTree = async (req, res) => {
   try {
     const areas = await prisma.area.findMany({
-      where: { parentId: null }, // solo raíces
-      include: { children: true },
+      where: { parentId: null }, // Solo traemos los Departamentos Raíz (ej. "Sistemas")
+      include: {
+        children: {
+          // 1er Nivel: Los Puestos (ej. "Auxiliar de Sistemas")
+          include: {
+            users: {
+              // 2do Nivel: Las Personas reales en ese puesto
+              select: {
+                // Usamos 'select' para no mandar passwords ni datos sensibles
+                id: true,
+                name: true,
+                email: true, // (Opcional, útil para la UI)
+              },
+              where: {
+                isActive: true, // Buena práctica: no traer exempleados
+              },
+            },
+          },
+        },
+        users: {
+          select: { id: true, name: true },
+        },
+      },
     });
-     res.status(200).json({ success: true, data: areas });
+
+    res.status(200).json({ success: true, data: areas });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Error al obtener el árbol de áreas y usuarios" });
   }
 };
 

@@ -38,7 +38,7 @@ export default function Layout({ authUser, onLogout }) {
 
         {/* Links de Navegación */}
         <nav className="flex-1 px-4 space-y-2 mt-4">
-          {/* 
+          
           <Link
             to="/"
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/" || location.pathname.startsWith("/dashboard") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500  hover:text-gray-900"}`}
@@ -51,7 +51,7 @@ export default function Layout({ authUser, onLogout }) {
           >
             <FolderKanban className="w-5 h-5" /> Proyectos
           </Link>
-          */}
+          
           <Link
             to="/tareas"
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/tareas" || location.pathname.startsWith("/tareas") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500  hover:text-gray-900"}`}
