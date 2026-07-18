@@ -6,6 +6,7 @@ import { CreateSessionForm } from './CreateSessionForm';
 import { ActiveSessionsTable } from './ActiveSessionsTable';
 import { HistorySessionsTable } from './HistorySessionsTable';
 import { ServiceStagesConfig } from './ServiceStagesConfig';
+import { TechnicianDevices } from './TechnicianDevices';
 
 export function AdminLive({ authUser, users, onSessionsChange }) {
   const [activeTab, setActiveTab] = useState('create'); // 'create', 'active', 'history', 'config'
@@ -93,6 +94,10 @@ export function AdminLive({ authUser, users, onSessionsChange }) {
           loading={loading}
           onCreateServiceType={handleCreateServiceType}
         />
+      )}
+
+      {activeTab === 'devices' && (
+        <TechnicianDevices users={users} />
       )}
     </div>
   );

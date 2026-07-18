@@ -2,7 +2,8 @@ const TABS = [
   { key: 'create', label: 'Nueva Sesión' },
   { key: 'active', label: 'Sesiones Activas' },
   { key: 'history', label: 'Historial' },
-  { key: 'config', label: 'Parametrizar Etapas' }
+  { key: 'config', label: 'Parametrizar Etapas' },
+  { key: 'devices', label: 'Dispositivos' }
 ];
 
 export function AdminLiveTabs({ activeTab, onChange, activeCount }) {

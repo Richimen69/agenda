@@ -18,6 +18,7 @@ import { sileo, Toaster } from "sileo";
 // NUEVAS IMPORTACIONES DEL MÓDULO LIVE
 import { AdminLive } from "@modules/live/pages/AdminLive";
 import { LiveRoom } from "@modules/live/components/LiveRoom";
+import { TechnicianKiosk } from "@modules/live/pages/TechnicianKiosk";
 
 export default function App() {
   const { authUser, setAuthUser, isCheckingAuth, handleLogout } = useAuth();
@@ -30,6 +31,7 @@ export default function App() {
     fetchData,
     handleStatusChange,
     handleAddComment,
+    myProjects
   } = useAppData(authUser);
 
   useEffect(() => {
@@ -40,9 +42,26 @@ export default function App() {
   // 1. INTERCEPCIÓN PÚBLICA (OMITIR LOGIN PARA CLIENTE Y TÉCNICO EN PRUEBAS)
   // =========================================================================
   const queryParams = new URLSearchParams(window.location.search);
-  const role = queryParams.get("role"); // "technician", "client" o "spectator"
+  const role = queryParams.get("role"); // "technician", "client", "spectator" o "technician-kiosk"
   const room = queryParams.get("room"); // ID de la sesión
   const label = queryParams.get("label") || "Servicio";
+
+  // -------------------------------------------------------------------------
+  // KIOSCO DEL TÉCNICO: URL fija por dispositivo, SIN room y SIN login.
+  // Ej: https://tudominio.com/?role=technician-kiosk&technicianId=abc123&name=Juan
+  // El dispositivo se queda esperando y se autoconecta solo en cuanto el
+  // asesor le asigna una sesión desde AdminLive. Va primero porque no
+  // depende de "room" como el resto de los roles de abajo.
+  // -------------------------------------------------------------------------
+  const technicianId = queryParams.get("technicianId");
+  if (role === "technician-kiosk" && technicianId) {
+    return (
+      <TechnicianKiosk
+        technicianId={technicianId}
+        participantName={queryParams.get("name") || "Técnico"}
+      />
+    );
+  }
 
   if (
     room &&
@@ -168,8 +187,9 @@ export default function App() {
                   events={events}
                   authUser={authUser}
                   users={users}
-                  onEventsChange={fetchData}
+                  onProjectsChange={fetchData}
                   places={places}
+                  myProjects={myProjects}
                 />
               }
             />

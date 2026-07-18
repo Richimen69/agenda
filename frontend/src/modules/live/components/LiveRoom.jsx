@@ -19,6 +19,7 @@ export function LiveRoom({
   participantName,
   isTechnician,
   isSpectator = false,
+  kioskMode = false,
 }) {
   const [token, setToken] = useState(null);
   const [error, setError] = useState(null);
@@ -70,7 +71,7 @@ export function LiveRoom({
           data-lk-theme="default"
         >
           {isTechnician ? (
-            <TechnicianLayout sessionId={roomName} /> 
+            <TechnicianLayout sessionId={roomName} kioskMode={kioskMode} />
           ) : (
             <ClientLayout sessionId={roomName} isSpectator={isSpectator} />
           )}

@@ -12,6 +12,24 @@ export function getSessionUrls(session) {
   };
 }
 
+/**
+ * Link FIJO del kiosco de un técnico. A diferencia de getSessionUrls(),
+ * este NO depende de una sesión — se genera una sola vez por técnico/celular
+ * al dar de alta el dispositivo. El celular se queda con este link guardado
+ * en su pantalla de inicio y se autoconecta solo cada vez que el asesor le
+ * asigna un servicio nuevo (ver TechnicianKiosk.jsx).
+ */
+export function getTechnicianKioskUrl(user) {
+  const baseUri = window.location.origin;
+  return `${baseUri}/?role=technician-kiosk&technicianId=${user.id}&name=${encodeURIComponent(user.name)}`;
+}
+
+export function copyTechnicianKioskUrl(user) {
+  const url = getTechnicianKioskUrl(user);
+  navigator.clipboard.writeText(url);
+  alert(`Link de dispositivo de ${user.name} copiado!`);
+}
+
 export function shareSessionViaWhatsApp(session) {
   const { clientUrl } = getSessionUrls(session);
   const message = `Hola ${session.customerName}, Toyota Kyojin te comparte el enlace de monitoreo del servicio en tiempo real para tu vehículo: ${clientUrl}`;

@@ -6,10 +6,10 @@ import {
   VideoTrack,
   useTracks,
   useLocalParticipant,
+  useAudioPlayback,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import {
-  VideoOff,
   Mic,
   MicOff,
   Volume2,
@@ -23,13 +23,15 @@ import {
   ConnectionLoading,
   SessionFinished,
 } from "../components/ConnectionStatus";
+import espera from "@assets/espera.png";
+import logo from "@assets/logo.png";
 
 export function ClientLayout({ sessionId, isSpectator = false }) {
   const room = useRoomContext();
   const cameraTracks = useTracks([Track.Source.Camera]);
   const videoTrack = cameraTracks[0];
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
-
+  const { canPlayAudio, startAudio } = useAudioPlayback(room);
   const [session, setSession] = useState(null); // Almacenamos todo el objeto de la sesión
   const [currentStageId, setCurrentStageId] = useState(null);
 
@@ -43,7 +45,6 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
       try {
         const sessionData = await getLiveSessionById(sessionId);
         setSession(sessionData);
-        console.log("w", sessionData);
         setCurrentStageId(sessionData.currentStageId);
       } catch (error) {
         console.error("Error al cargar la sesión dinámica de Postgres:", error);
@@ -187,27 +188,44 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
               <VideoTrack trackRef={videoTrack} className="w-full h-full" />
 
               {/* Usted está silenciado */}
-              <div className="absolute top-4 left-4 bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] text-orange-400 font-bold">
-                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full"></span>
-                {isMicrophoneEnabled
-                  ? "El tecnico puede oirte"
-                  : "Usted está silenciado"}
-              </div>
-
-              {/* Parámetros de Video */}
-              <div className="absolute top-4 right-4 bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg text-[10px] text-slate-300 font-semibold tracking-wide">
-                720P • 30 FPS • H.264
-              </div>
-
-              {/* Voz conectada */}
-              <div className="absolute bottom-4 left-4 flex items-center gap-2 text-[10px] text-emerald-400 font-bold bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                VOZ CONECTADA AL TÉCNICO
+              <div className="absolute top-4 left-4 px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-bold">
+              <img src={logo} alt="" />
               </div>
 
               {/* Señal en tiempo real */}
               <div className="absolute bottom-4 right-16 flex items-center gap-2 text-[10px] text-slate-300 font-bold bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg">
                 SEÑAL EN TIEMPO REAL
+              </div>
+
+              <div className="absolute bottom-4 left-4 flex items-center gap-2 text-[10px] font-bold  px-3 py-1.5 rounded-lg">
+                {!isSpectator && (
+                  <div className="p-4">
+                    <button
+                      onClick={toggleMic}
+                      className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 px-4 rounded-xl transition-all cursor-pointer shadow-lg text-xs md:text-sm ${
+                        isMicrophoneEnabled
+                          ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-950/10"
+                          : "bg-red-600 hover:bg-red-700 active:bg-red-800 shadow-red-950/10"
+                      }`}
+                    >
+                      {isMicrophoneEnabled ? (
+                        <>
+                          <Mic className="w-5 h-5 animate-pulse text-white" />
+                        </>
+                      ) : (
+                        <>
+                          <MicOff className="w-5 h-5 text-white" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+                <div className="top-4 left-4 bg-slate-900/80 border border-slate-800/60 px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] text-orange-400 font-bold">
+                  <span className="w-1.5 h-1.5 bg-orange-400 rounded-full"></span>
+                  {isMicrophoneEnabled
+                    ? "El tecnico puede oirte"
+                    : "Usted está silenciado"}
+                </div>
               </div>
 
               {/* Botón de Pantalla Completa */}
@@ -224,49 +242,31 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4">
-                <VideoOff className="text-slate-600 w-8 h-8" />
-              </div>
-              <span className="text-[10px] uppercase font-bold text-red-500 tracking-widest">
-                Fase del Servicio en Curso
-              </span>
-              <h3 className="text-base font-bold text-slate-200 tracking-tight mt-1 uppercase">
-                {session.currentStage?.name || "Mantenimiento activo"}
-              </h3>
-              <p className="text-xs text-slate-400 max-w-sm mt-2 leading-relaxed px-4">
-                "El técnico {session.technician?.name || "asignado"} está
-                trabajando en su vehículo. Hable con él en cualquier momento."
-              </p>
+              <img src={espera} alt="" />
             </div>
           )}
         </div>
-
-        {/* Botón de Muteo */}
-        {!isSpectator && (
-          <div className="p-4 border-t border-gray-150 bg-gray-50/30">
-            <button
-              onClick={toggleMic}
-              className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 px-4 rounded-xl transition-all cursor-pointer shadow-lg text-xs md:text-sm ${
-                isMicrophoneEnabled
-                  ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-950/10"
-                  : "bg-red-600 hover:bg-red-700 active:bg-red-800 shadow-red-950/10"
-              }`}
-            >
-              {isMicrophoneEnabled ? (
-                <>
-                  <Mic className="w-5 h-5 animate-pulse text-white" />
-                  <span>HABLANDO EN VIVO (PRESIONA PARA SILENCIAR)</span>
-                </>
-              ) : (
-                <>
-                  <MicOff className="w-5 h-5 text-white" />
-                  <span>HABLAR CON EL TÉCNICO POR AUDIO (LLAMAR)</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
+      {!canPlayAudio && (
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 z-50 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-4 animate-pulse shadow-md shadow-red-500/10">
+            <Volume2 className="w-8 h-8" />
+          </div>
+          <h3 className="text-base font-black text-white tracking-tight">
+            Audio en Pausa
+          </h3>
+          <p className="text-xs text-slate-400 max-w-xs mt-2 leading-relaxed px-4 mb-5">
+            El navegador ha silenciado el canal de audio por seguridad. Presiona
+            el botón para escuchar la bahía de servicio en vivo.
+          </p>
+          <button
+            onClick={startAudio} // <-- Esta función nativa de LiveKit desbloquea el audio en el S.O.
+            className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-xs py-3.5 px-6 rounded-xl shadow-lg shadow-red-600/20 cursor-pointer active:scale-95 transition-transform"
+          >
+            ACTIVAR AUDIO DE TRANSMISIÓN 🔊
+          </button>
+        </div>
+      )}
 
       {/* =========================================================================
           BLOQUE 3: AVANCE GENERAL DEL MANTENIMIENTO (Progreso y Línea de Tiempo)

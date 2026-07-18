@@ -11,7 +11,14 @@ import CreateProjectModal from "../components/CreateProjectModal";
 import { createProject } from "../services/projects.api";
 import ProjectList from "../components/ProjectList";
 
-export default function ProyectosPage({ users, authUser, events, places }) {
+export default function ProyectosPage({
+  users,
+  authUser,
+  events,
+  places,
+  myProjects,
+  onProjectsChange
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCreateProject = async ({
@@ -27,6 +34,9 @@ export default function ProyectosPage({ users, authUser, events, places }) {
       creatorId: authUser.id,
       members,
     });
+    if(result.success){
+      onProjectsChange();
+    }
 
     return result;
   };
@@ -48,7 +58,7 @@ export default function ProyectosPage({ users, authUser, events, places }) {
           <Plus className="w-4 h-4" /> Nuevo Proyecto
         </button>
       </div>
-      <ProjectList />
+      <ProjectList myProjects={myProjects} />
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

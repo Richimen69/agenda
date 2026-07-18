@@ -6,6 +6,7 @@ import {
   updateTicketStatus,
   addTicketComment,
   getPlaces,
+  getMyProjects
 } from "@services/api";
 
 export function useAppData(authUser) {
@@ -15,19 +16,22 @@ export function useAppData(authUser) {
   const [loading, setLoading] = useState(false);
   const [places, setPlaces] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [myProjects, setMyProjects] = useState([]);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
     setLoading(true);
     try {
-      const [usersData, ticketsData, eventsData, placesData] =
+      const [usersData, ticketsData, eventsData, placesData, myProjectsData] =
         await Promise.all([
           getUsers(),
           getTickets(authUser.id),
           getEvents(authUser.id),
           getPlaces(),
+          getMyProjects(authUser.id)
         ]);
       setUsers(usersData);
+      setMyProjects(myProjectsData)
       if (ticketsData.success) setTickets(ticketsData.data);
       if (eventsData.success) setEvents(eventsData.data);
       if (placesData.success) setPlaces(placesData.data);
@@ -57,5 +61,6 @@ export function useAppData(authUser) {
     fetchData,
     handleStatusChange,
     handleAddComment,
+    myProjects
   };
 }

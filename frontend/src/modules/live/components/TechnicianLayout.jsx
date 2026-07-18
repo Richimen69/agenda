@@ -6,7 +6,6 @@ import {
   useRoomContext,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useNavigate } from "react-router-dom"; // Para redireccionar al finalizar
 import {
   getLiveSessionById,
   updateLiveSessionStage,
@@ -24,11 +23,54 @@ import {
   Settings,
 } from "lucide-react";
 
-export function TechnicianLayout({ sessionId }) {
+export function TechnicianLayout({ sessionId, kioskMode = false }) {
   const room = useRoomContext();
-  const navigate = useNavigate();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
     useLocalParticipant();
+  const wakeLockRef = useRef(null);
+
+  // En modo kiosco (dispositivo fijo del técnico): pantalla completa y
+  // "no apagar pantalla" automáticos, sin que el técnico toque nada.
+  useEffect(() => {
+    if (!kioskMode) return;
+
+    async function goFullscreenAndLock() {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn("No se pudo activar pantalla completa:", err);
+      }
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLockRef.current = await navigator.wakeLock.request("screen");
+        }
+      } catch (err) {
+        console.warn("No se pudo mantener la pantalla encendida:", err);
+      }
+    }
+
+    goFullscreenAndLock();
+
+    // El wake lock se libera si el navegador cambia de pestaña/minimiza;
+    // lo volvemos a pedir en cuanto el dispositivo regresa a primer plano.
+    const handleVisibility = async () => {
+      if (document.visibilityState === "visible" && "wakeLock" in navigator) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request("screen");
+        } catch (err) {
+          console.warn("No se pudo re-adquirir wake lock:", err);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      wakeLockRef.current?.release?.();
+    };
+  }, [kioskMode]);
 
   // Estados para controlar los datos asíncronos de Postgres (Prisma)
   const [session, setSession] = useState(null);
@@ -96,7 +138,18 @@ export function TechnicianLayout({ sessionId }) {
     try {
       await finishLiveSession(sessionId);
       alert("Mantenimiento finalizado con éxito.");
-      navigate("/live"); // Redirecciona de vuelta al Panel de Control de Kyojin
+
+      if (kioskMode) {
+        // No navegamos a ningún lado: el kiosco no tiene login ni rutas
+        // internas. El useTechnicianSession del dispositivo detecta solo
+        // que la sesión ya no está activa y regresa a la pantalla de espera.
+      } else {
+        // Fuera del kiosco (link manual o ruta interna /live-tech), sí
+        // tiene sentido volver al panel. Usamos window.location en vez de
+        // useNavigate porque este componente también se monta fuera del
+        // <BrowserRouter> (en el bloque de interceptación de App.jsx).
+        window.location.href = "/live";
+      }
     } catch (error) {
       console.error("Error al finalizar mantenimiento:", error);
       alert("Error al finalizar el servicio.");
@@ -122,6 +175,112 @@ export function TechnicianLayout({ sessionId }) {
   const currentActiveStageIdx = stages.findIndex(
     (s) => s.id === currentStageId,
   );
+
+  // =========================================================================
+  // VISTA DE KIOSCO (celular del técnico): pantalla completa, un solo botón
+  // grande para avanzar de etapa, pensado para tocarse con el pulgar sin
+  // tener que hacer scroll ni buscar la tarjeta correcta entre varias.
+  // =========================================================================
+  if (kioskMode) {
+    const currentStage = stages[currentActiveStageIdx] || null;
+    const isLastStage = currentActiveStageIdx === stages.length - 1;
+
+    return (
+      <div className="flex flex-col h-full w-full bg-slate-950 text-white overflow-hidden">
+        {/* Barra superior mínima */}
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800 shrink-0">
+          <span className="text-[10px] font-black uppercase tracking-wide bg-red-600 px-2.5 py-1 rounded-lg">
+            {session.roomName}
+          </span>
+          <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            En vivo
+          </span>
+        </div>
+
+        {/* Video: ocupa todo el espacio disponible */}
+        <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-0">
+          {isCameraEnabled ? (
+            <VideoTrack
+              trackRef={{
+                participant: localParticipant,
+                source: Track.Source.Camera,
+              }}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-slate-500 text-xs">Cámara en pausa</div>
+          )}
+        </div>
+
+        {/* Panel inferior fijo tipo "hoja": etapa actual + acciones grandes,
+            todo dentro del alcance del pulgar sin necesidad de scroll. */}
+        <div className="bg-white text-gray-900 px-4 pt-5 pb-6 rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.3)] flex flex-col gap-3 shrink-0">
+          <div className="text-center">
+            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+              {stages.length > 0
+                ? `Paso ${currentActiveStageIdx + 1} de ${stages.length}`
+                : "Servicio"}
+            </span>
+            <h2 className="text-lg font-black text-gray-900 tracking-tight mt-0.5 leading-tight">
+              {currentStage?.name || "Servicio en curso"}
+            </h2>
+          </div>
+
+          {/* Botón gigante de siguiente etapa — el control principal del técnico */}
+          <button
+            type="button"
+            disabled={loadingStage || !currentStage}
+            onClick={() => {
+              if (isLastStage) {
+                alert("¡Has completado la última etapa del servicio!");
+              } else {
+                handleStageChange(stages[currentActiveStageIdx + 1].id);
+              }
+            }}
+            className="w-full bg-red-600 active:bg-red-800 disabled:bg-red-300 text-white font-black text-base py-5 rounded-2xl shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            <CheckCircle2 className="w-6 h-6" />
+            {loadingStage
+              ? "Guardando..."
+              : isLastStage
+                ? "Última Etapa"
+                : "Siguiente Etapa"}
+          </button>
+
+          {/* Acciones secundarias: mic y finalizar, también grandes */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)
+              }
+              className={`py-4 rounded-2xl font-bold text-xs flex flex-col items-center gap-1.5 transition-colors cursor-pointer border ${
+                isMicrophoneEnabled
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+              }`}
+            >
+              {isMicrophoneEnabled ? (
+                <Mic className="w-5 h-5" />
+              ) : (
+                <MicOff className="w-5 h-5" />
+              )}
+              {isMicrophoneEnabled ? "Silenciar" : "Micrófono"}
+            </button>
+            <button
+              type="button"
+              onClick={handleEndMaintenance}
+              className="py-4 rounded-2xl font-bold text-xs flex flex-col items-center gap-1.5 bg-gray-100 text-gray-500 border border-gray-200 cursor-pointer"
+            >
+              <LogOut className="w-5 h-5" />
+              Finalizar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] text-gray-900 font-sans p-4 gap-6">
@@ -192,7 +351,7 @@ export function TechnicianLayout({ sessionId }) {
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col flex-1 gap-4">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
               <Settings className="w-4 h-4 text-red-500" />
-              Emisión Virtual OBS Studio
+              Transmisión en Vivo
             </h3>
 
             {/* Monitor de video (Fondo oscuro para contraste del video) */}
@@ -207,46 +366,49 @@ export function TechnicianLayout({ sessionId }) {
                 />
               ) : (
                 <div className="text-slate-500 text-xs">
-                  La transmisión de OBS está en pausa
+                  Cámara en pausa
                 </div>
               )}
             </div>
 
-            {/* Selectores de Hardware */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-                  Origen de Video
-                </label>
-                <select
-                  value={activeCameraId}
-                  onChange={(e) => setActiveCamera(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-red-600 cursor-pointer truncate"
-                >
-                  {cameras.map((camera) => (
-                    <option key={camera.deviceId} value={camera.deviceId}>
-                      {camera.label || `Cámara ${camera.deviceId.slice(0, 5)}`}
-                    </option>
-                  ))}
-                </select>
+            {/* Selectores de Hardware: en modo kiosco se ocultan, ya que el
+                dispositivo es fijo y siempre usa la misma cámara/mic del arnés. */}
+            {!kioskMode && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                    Origen de Video
+                  </label>
+                  <select
+                    value={activeCameraId}
+                    onChange={(e) => setActiveCamera(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-red-600 cursor-pointer truncate"
+                  >
+                    {cameras.map((camera) => (
+                      <option key={camera.deviceId} value={camera.deviceId}>
+                        {camera.label || `Cámara ${camera.deviceId.slice(0, 5)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                    Entrada de Audio (Micrófono)
+                  </label>
+                  <select
+                    value={activeMicId}
+                    onChange={(e) => setActiveMic(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-red-600 cursor-pointer truncate"
+                  >
+                    {microphones.map((mic) => (
+                      <option key={mic.deviceId} value={mic.deviceId}>
+                        {mic.label || `Micrófono ${mic.deviceId.slice(0, 5)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-                  Entrada de Audio (Micrófono)
-                </label>
-                <select
-                  value={activeMicId}
-                  onChange={(e) => setActiveMic(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-red-600 cursor-pointer truncate"
-                >
-                  {microphones.map((mic) => (
-                    <option key={mic.deviceId} value={mic.deviceId}>
-                      {mic.label || `Micrófono ${mic.deviceId.slice(0, 5)}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
 
             {/* Botones de Muteo */}
             <div className="grid grid-cols-2 gap-3 mt-2">
