@@ -64,7 +64,12 @@ export function LiveRoom({
       {/* Cambiado a max-w-7xl y border-gray-200 para dar espacio a la consola de doble columna */}
       <div className="w-full max-w-7xl h-[95vh] md:h-[90vh] bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl relative flex flex-col">
         <LiveKitRoom
-          video={isTechnician}
+          // Para el técnico forzamos la cámara TRASERA (environment) porque
+          // el celular va en el arnés viendo hacia afuera — sin esto, LiveKit
+          // pide por default la cámara frontal (facingMode: "user").
+          video={
+            isTechnician ? { facingMode: "environment" } : false
+          }
           audio={isTechnician} // El espectador/cliente no publica audio al entrar para evitar auricular
           token={token}
           serverUrl={LIVEKIT_SERVER_URL}

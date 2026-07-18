@@ -307,13 +307,12 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center p-6 text-center h-full">
                 <img
                   src={espera}
                   alt="En espera"
-                  className="w-32 md:w-48 lg:w-64 opacity-50"
+                  object-fill
+                  className="object-fill opacity-50"
                 />
-              </div>
             )}
 
             {/* Logo */}
