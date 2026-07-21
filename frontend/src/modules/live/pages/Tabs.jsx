@@ -13,7 +13,7 @@ export function AdminLiveTabs({ activeTab, onChange, activeCount }) {
         <button
           key={tab.key}
           onClick={() => onChange(tab.key)}
-          className={`pb-3 px-4 font-semibold text-sm border-b-2 whitespace-nowrap relative ${
+          className={`pb-3 px-4 font-semibold text-sm border-b-2 whitespace-nowrap relative cursor-pointer ${
             activeTab === tab.key
               ? 'border-red-600 text-red-600'
               : 'border-transparent text-gray-400 hover:text-gray-600'

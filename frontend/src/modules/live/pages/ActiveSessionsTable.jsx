@@ -66,7 +66,7 @@ function ActiveSessionRow({ session, onFinish }) {
             onClick={() => copyClientLink(session)}
             target="_blank"
             rel="noreferrer"
-            className="text-red-600 hover:underline truncate max-w-[200px] cursor-pointer"
+            className="text-red-600 hover:underline truncate max-w-50 cursor-pointer"
           >
             Link para Cliente
           </a>
