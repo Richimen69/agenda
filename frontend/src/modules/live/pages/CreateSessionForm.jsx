@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sileo } from "sileo";
 
 const EMPTY_FORM = {
   roomName: "",
@@ -41,7 +42,16 @@ export function CreateSessionForm({
 
     const result = await onSubmit(formData);
     if (result.success) {
-      alert("Sesión registrada y vinculada a su flujo de etapas.");
+      sileo.success({
+        title: "Campaña creada",
+        description: "La campaña se registro exitosamente",
+        fill: "#D8F3DC",
+        styles: {
+          title: "text-black/75!",
+          description: "text-black/75!",
+          badge: "bg-white!",
+        },
+      });
       setFormData(EMPTY_FORM);
       if (onSuccess) onSuccess();
     } else {
@@ -107,7 +117,7 @@ export function CreateSessionForm({
           </label>
           <input
             type="tel"
-            placeholder="Ej: 5215512345678"
+            placeholder="Ej: 7441234567"
             value={formData.customerPhone}
             onChange={updateField("customerPhone")}
             className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-red-600"

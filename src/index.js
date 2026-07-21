@@ -15,6 +15,7 @@ import {
   detenerWhatsApp,
   encenderWhatsApp,
   getStatusWhatsApp,
+  sendWhatsAppMessage
 } from "./whatsapp.js";
 import {
   createTicket,
@@ -108,6 +109,34 @@ app.get("/api/whatsapp/status", (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+app.post("/api/whatsapp", async (req, res) => {
+  const { phone, message } = req.body;
+
+  // Validación básica de los datos de entrada
+  if (!phone || !message) {
+    return res.status(400).json({ 
+      error: "Se requieren los campos 'phone' y 'message' en el cuerpo de la petición." 
+    });
+  }
+
+  try {
+    // Llamas a tu función pasando los parámetros del request
+    const response = await sendWhatsAppMessage(phone, message);
+    
+    return res.status(200).json({
+      success: true,
+      message: "Mensaje enviado correctamente",
+      data: response
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Error al enviar el mensaje de WhatsApp"
+    });
+  }
+});
+
 
 // Nuestra ruta principal de Agenda
 app.post("/api/events", createEvent);

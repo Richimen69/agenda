@@ -1,4 +1,4 @@
-import { getSessionUrls, shareSessionViaWhatsApp, copySupervisorLink } from '../utils/liveUrls';
+import { getSessionUrls, shareSessionViaWhatsApp, copySupervisorLink, copyClientLink } from '../utils/liveUrls';
 
 export function ActiveSessionsTable({ sessions, onFinish }) {
   if (sessions.length === 0) {
@@ -58,15 +58,15 @@ function ActiveSessionRow({ session, onFinish }) {
       <td className="p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs">
           <span className="font-bold text-[10px] uppercase text-gray-400 w-16">Transmisor</span>
-          <a href={techUrl} className="text-red-600 hover:underline">Abrir Cámara Virtual (OBS)</a>
+          <a href={techUrl} className="text-red-600 hover:underline">Abrir Cámara Virtual</a>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="font-bold text-[10px] uppercase text-gray-400 w-16">Receptor</span>
           <a
-            href={clientUrl}
+            onClick={() => copyClientLink(session)}
             target="_blank"
             rel="noreferrer"
-            className="text-red-600 hover:underline truncate max-w-[200px]"
+            className="text-red-600 hover:underline truncate max-w-[200px] cursor-pointer"
           >
             Link para Cliente
           </a>
@@ -77,7 +77,7 @@ function ActiveSessionRow({ session, onFinish }) {
             onClick={() => copySupervisorLink(session)}
             className="text-red-600 hover:underline text-left cursor-pointer"
           >
-            Copiar Link de Supervisor 📋
+            Copiar Link de Supervisor
           </button>
         </div>
       </td>

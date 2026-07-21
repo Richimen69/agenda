@@ -2,13 +2,15 @@
  * Utilidades para generar los enlaces de acceso y compartir sesiones
  * de Toyota Live por WhatsApp / portapapeles.
  */
+import { sendWhatsapp } from "@services/whatsapp.api";
+import { sileo } from "sileo";
 
 export function getSessionUrls(session) {
   const baseUri = window.location.origin;
   return {
     techUrl: `${baseUri}/live-tech?room=${session.id}&label=${encodeURIComponent(session.roomName)}`,
     clientUrl: `${baseUri}/?role=client&room=${session.id}&label=${encodeURIComponent(session.roomName)}`,
-    specUrl: `${baseUri}/?role=spectator&room=${session.id}&label=${encodeURIComponent(session.roomName)}`
+    specUrl: `${baseUri}/?role=spectator&room=${session.id}&label=${encodeURIComponent(session.roomName)}`,
   };
 }
 
@@ -27,18 +29,70 @@ export function getTechnicianKioskUrl(user) {
 export function copyTechnicianKioskUrl(user) {
   const url = getTechnicianKioskUrl(user);
   navigator.clipboard.writeText(url);
-  alert(`Link de dispositivo de ${user.name} copiado!`);
+  sileo.success({
+    title: `Link de dispositivo de ${user.name} copiado!`,
+    fill: "#D8F3DC",
+    styles: {
+      title: "text-black/75!",
+      description: "text-black/75!",
+      badge: "bg-white!",
+    },
+  });
 }
 
-export function shareSessionViaWhatsApp(session) {
-  const { clientUrl } = getSessionUrls(session);
-  const message = `Hola ${session.customerName}, Toyota Kyojin te comparte el enlace de monitoreo del servicio en tiempo real para tu vehículo: ${clientUrl}`;
-  const whatsappUrl = `https://wa.me/${session.customerPhone}?text=${encodeURIComponent(message)}`;
-  window.open(whatsappUrl, '_blank');
-}
+export const shareSessionViaWhatsApp = async (session) => {
+  try {
+    const { clientUrl } = getSessionUrls(session);
+
+    // 1. Asegurar que la URL tenga el protocolo http:// o https://
+    const clickableUrl = clientUrl.startsWith("http")
+      ? clientUrl
+      : `https://${clientUrl}`;
+
+    // 2. Usar saltos de línea (\n) para separar la URL del texto
+    const message = `Hola ${session.customerName}, Toyota Guerrero te comparte el enlace de monitoreo del servicio en tiempo real para tu vehículo:\n\n${clickableUrl}`;
+
+    const result = await sendWhatsapp(session.customerPhone, message);
+    return result;
+  } catch (error) {
+    sileo.error({
+      title: "Error",
+      description: "No se pudo mandar el mensaje por WhatsApp",
+      fill: "#EB0A1E",
+      styles: {
+        title: "text-white!",
+        description: "text-white!",
+        badge: "bg-white!",
+      },
+    });
+    throw error;
+  }
+};
 
 export function copySupervisorLink(session) {
   const { specUrl } = getSessionUrls(session);
   navigator.clipboard.writeText(specUrl);
-  alert('Link de Supervisor copiado!');
+  sileo.success({
+    title: "Link de Supervisor copiado!",
+    fill: "#D8F3DC",
+    styles: {
+      title: "text-black/75!",
+      description: "text-black/75!",
+      badge: "bg-white!",
+    },
+  });
+}
+
+export function copyClientLink(session) {
+  const { clientUrl } = getSessionUrls(session);
+  navigator.clipboard.writeText(clientUrl);
+  sileo.success({
+    title: "Link de cliente copiado!",
+    fill: "#D8F3DC",
+    styles: {
+      title: "text-black/75!",
+      description: "text-black/75!",
+      badge: "bg-white!",
+    },
+  });
 }

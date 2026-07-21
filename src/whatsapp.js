@@ -77,7 +77,6 @@ export const sendWhatsAppMessage = async (phone, message) => {
   }
 };
 
-// ... (tu código anterior de inicializarWhatsApp)
 
 // Función para apagar el bot por completo
 export const detenerWhatsApp = async () => {

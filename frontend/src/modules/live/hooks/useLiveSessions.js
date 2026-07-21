@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
   getLiveSessions,
   createLiveSession,
   finishLiveSession,
-  deleteLiveSession
-} from '../services/live.api';
-import { shareSessionViaWhatsApp } from '../utils/liveUrls';
+  deleteLiveSession,
+} from "../services/live.api";
+import { shareSessionViaWhatsApp } from "../utils/liveUrls";
+import { Result } from "postcss";
+import { id } from "date-fns/locale";
 
 /**
  * Encapsula el fetch, filtrado y operaciones CRUD de las sesiones
@@ -24,7 +26,7 @@ export function useLiveSessions({ onSessionsChange } = {}) {
       const data = await getLiveSessions();
       setSessions(data);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error("Error fetching sessions:", error);
     } finally {
       setLoading(false);
     }
@@ -39,55 +41,66 @@ export function useLiveSessions({ onSessionsChange } = {}) {
     if (onSessionsChange) onSessionsChange();
   }, [fetchSessions, onSessionsChange]);
 
-  const createSession = useCallback(async (formData, advisorId) => {
-    setLoading(true);
-    try {
-      const newSession = await createLiveSession({
-        roomName: formData.roomName,
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone || null,
-        vehicleModel: formData.vehicleModel || null,
-        advisorId, // Asignamos automáticamente el ID del usuario logueado
-        technicianId: formData.technicianId || null,
-        serviceTypeId: formData.serviceTypeId
-      });
+  const createSession = useCallback(
+    async (formData, advisorId) => {
+      setLoading(true);
+      try {
+        const newSession = await createLiveSession({
+          roomName: formData.roomName,
+          customerName: formData.customerName,
+          customerPhone: formData.customerPhone || null,
+          vehicleModel: formData.vehicleModel || null,
+          advisorId,
+          technicianId: formData.technicianId || null,
+          serviceTypeId: formData.serviceTypeId,
+        });
 
-      notifyChange();
+        notifyChange();
 
-      if (newSession.customerPhone) {
-        shareSessionViaWhatsApp(newSession);
+        if (newSession.customerPhone) {
+          shareSessionViaWhatsApp(newSession);
+        }
+
+        return { success: true, session: newSession };
+      } catch (error) {
+        return { success: false, error: error.message };
+      } finally {
+        setLoading(false);
       }
+    },
+    [notifyChange],
+  );
 
-      return { success: true, session: newSession };
-    } catch (error) {
-      return { success: false, error: error.message };
-    } finally {
-      setLoading(false);
-    }
-  }, [notifyChange]);
+  const finishSession = useCallback(
+    async (id) => {
+      try {
+        await finishLiveSession(id);
+        notifyChange();
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    },
+    [notifyChange],
+  );
 
-  const finishSession = useCallback(async (id) => {
-    try {
-      await finishLiveSession(id);
-      notifyChange();
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }, [notifyChange]);
+  const deleteSession = useCallback(
+    async (id) => {
+      try {
+        await deleteLiveSession(id);
+        notifyChange();
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    },
+    [notifyChange],
+  );
 
-  const deleteSession = useCallback(async (id) => {
-    try {
-      await deleteLiveSession(id);
-      notifyChange();
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }, [notifyChange]);
-
-  const activeSessions = sessions.filter(s => s.status === 'WAITING' || s.status === 'ACTIVE');
-  const finishedSessions = sessions.filter(s => s.status === 'FINISHED');
+  const activeSessions = sessions.filter(
+    (s) => s.status === "WAITING" || s.status === "ACTIVE",
+  );
+  const finishedSessions = sessions.filter((s) => s.status === "FINISHED");
 
   return {
     sessions,
@@ -97,6 +110,6 @@ export function useLiveSessions({ onSessionsChange } = {}) {
     fetchSessions,
     createSession,
     finishSession,
-    deleteSession
+    deleteSession,
   };
 }
