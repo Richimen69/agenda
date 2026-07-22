@@ -98,7 +98,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
     const supportsNativeFullscreen =
       element.requestFullscreen || element.webkitRequestFullscreen;
 
-    // iPhone Safari no soporta la Fullscreen API para <div>, usamos CSS
+    // iOS Safari no soporta la Fullscreen API en <div>, activamos el "Faux Fullscreen" vía CSS
     if (!supportsNativeFullscreen) {
       setIsFullscreen(true);
       setNeedsManualFullscreenTap(false);
@@ -109,19 +109,27 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
       ? element.requestFullscreen()
       : element.webkitRequestFullscreen();
 
-    Promise.resolve(request).catch(() => {
-      setNeedsManualFullscreenTap(true);
-    });
+    // Algunos navegadores antiguos no devuelven una promesa, validamos antes de usar .catch()
+    if (request !== undefined) {
+      request.catch(() => {
+        setNeedsManualFullscreenTap(true);
+      });
+    }
   };
 
   const exitFullscreen = () => {
-    if (document.exitFullscreen) {
+    // Verificamos si estamos en un fullscreen nativo real antes de intentar salir
+    if (document.fullscreenElement && document.exitFullscreen) {
       document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
+    } else if (
+      document.webkitFullscreenElement &&
+      document.webkitExitFullscreen
+    ) {
       document.webkitExitFullscreen();
-    } else {
-      setIsFullscreen(false);
     }
+
+    // Siempre apagamos nuestro estado (vital para el Faux Fullscreen de iOS)
+    setIsFullscreen(false);
     setNeedsManualFullscreenTap(false);
   };
 
@@ -332,7 +340,14 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
           {/* WRAPPER FULLSCREEN NATIVO */}
           <div
             ref={videoContainerRef}
-            className="relative flex-1 w-full bg-slate-950 flex items-center justify-center overflow-hidden group"
+            className={`
+    bg-slate-950 flex items-center justify-center overflow-hidden group
+    ${
+      isFullscreen
+        ? "fixed inset-0 z-[9999] w-full h-[100dvh]" /* <-- Magia para iOS */
+        : "relative flex-1 w-full h-full"
+    }
+  `}
           >
             {/* Player */}
             {videoTrack ? (
