@@ -50,7 +50,7 @@ export const shareSessionViaWhatsApp = async (session) => {
       : `https://${clientUrl}`;
 
     // 2. Usar saltos de línea (\n) para separar la URL del texto
-    const message = `Hola ${session.customerName}, Toyota Guerrero te comparte el enlace de monitoreo del servicio en tiempo real para tu vehículo:\n\n${clickableUrl} \n\n (Si no puedes abir el link, agreganos a tus contactos)`;
+    const message = `Hola ${session.customerName}, Toyota Guerrero te comparte el enlace de monitoreo del servicio en tiempo real para tu vehículo:\n\n${clickableUrl} \n\n (Si no puedes abir el link, agréganos a tus contactos)`;
 
     const result = await sendWhatsapp(session.customerPhone, message);
     return result;

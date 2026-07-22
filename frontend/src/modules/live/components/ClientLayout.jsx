@@ -32,7 +32,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
   const [currentStageId, setCurrentStageId] = useState(null);
   const videoContainerRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
+  console.log(session)
   useEffect(() => {
     async function loadSession() {
       if (!sessionId) return;
@@ -290,7 +290,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 md:w-2.5 md:h-2.5 bg-red-600 rounded-full animate-pulse"></span>
               <span className="font-bold tracking-wider text-[9px] md:text-xs text-gray-800 uppercase">
-                Transmisión de Taller en Curso
+               Transmisión en curso, Tecnico: {session.technician?.name}
               </span>
             </div>
           </div>
