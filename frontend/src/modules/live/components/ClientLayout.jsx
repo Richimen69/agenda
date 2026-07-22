@@ -32,7 +32,9 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
   const [currentStageId, setCurrentStageId] = useState(null);
   const videoContainerRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  console.log(session)
+  const [needsManualFullscreenTap, setNeedsManualFullscreenTap] =
+    useState(false);
+  console.log(session);
   useEffect(() => {
     async function loadSession() {
       if (!sessionId) return;
@@ -79,17 +81,54 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
     };
   }, []);
 
-  const toggleFullscreen = () => {
+  useEffect(() => {
+    const mql = window.matchMedia("(orientation: landscape)");
+    const handleOrientationChange = (e) => {
+      if (e.matches) enterFullscreen();
+      else exitFullscreen();
+    };
+    mql.addEventListener("change", handleOrientationChange);
+    return () => mql.removeEventListener("change", handleOrientationChange);
+  }, []);
+
+  const enterFullscreen = () => {
     const element = videoContainerRef.current;
-    if (!element) return;
-    if (!isFullscreen) {
-      if (element.requestFullscreen) element.requestFullscreen();
-      else if (element.webkitRequestFullscreen)
-        element.webkitRequestFullscreen();
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    if (!element || isFullscreen) return;
+
+    const supportsNativeFullscreen =
+      element.requestFullscreen || element.webkitRequestFullscreen;
+
+    // iPhone Safari no soporta la Fullscreen API para <div>, usamos CSS
+    if (!supportsNativeFullscreen) {
+      setIsFullscreen(true);
+      setNeedsManualFullscreenTap(false);
+      return;
     }
+
+    const request = element.requestFullscreen
+      ? element.requestFullscreen()
+      : element.webkitRequestFullscreen();
+
+    Promise.resolve(request).catch(() => {
+      setNeedsManualFullscreenTap(true);
+    });
+  };
+
+  const exitFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else {
+      setIsFullscreen(false);
+    }
+    setNeedsManualFullscreenTap(false);
+  };
+
+  const toggleFullscreen = () => {
+    setNeedsManualFullscreenTap(false);
+    if (isFullscreen) exitFullscreen();
+    else enterFullscreen();
   };
 
   const toggleMic = () =>
@@ -145,7 +184,6 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
         />
       </div>
 
-      {/* Lista de pasos: Horizontal en móvil, Vertical en Desktop */}
       <div
         className="flex lg:flex-col gap-3 lg:gap-4 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0"
         style={{ scrollbarWidth: "none" }}
@@ -162,7 +200,6 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
               key={s.id}
               className="flex lg:flex-row flex-col items-center lg:items-start flex-1 lg:flex-none min-w-[65px] group"
             >
-              {/* Indicador visual */}
               <div className="flex flex-col items-center">
                 <div
                   className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center font-bold text-[10px] lg:text-xs transition-all duration-300 shrink-0 ${
@@ -179,15 +216,12 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
                     <span>{s.order}</span>
                   )}
                 </div>
-                {/* Línea conectora (solo visible en desktop) */}
                 {!isLast && (
                   <div
                     className={`hidden lg:block w-0.5 h-8 my-1 ${isPast && !isCurrent ? "bg-emerald-200" : "bg-gray-100"}`}
                   ></div>
                 )}
               </div>
-
-              {/* Texto de la etapa */}
               <div className="mt-2 lg:mt-0 lg:ml-4 text-center lg:text-left flex flex-col justify-center lg:h-8">
                 <span
                   className={`font-bold tracking-tight text-[9px] lg:text-xs leading-tight block ${isCurrent ? "text-red-600" : isPast ? "text-gray-800" : "text-gray-400"}`}
@@ -290,7 +324,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 md:w-2.5 md:h-2.5 bg-red-600 rounded-full animate-pulse"></span>
               <span className="font-bold tracking-wider text-[9px] md:text-xs text-gray-800 uppercase">
-               Transmisión en curso, Tecnico: {session.technician?.name}
+                Transmisión en curso, Tecnico: {session.technician?.name}
               </span>
             </div>
           </div>
@@ -307,12 +341,12 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
                 className="w-full h-full object-contain"
               />
             ) : (
-                <img
-                  src={espera}
-                  alt="En espera"
-                  object-fill
-                  className="object-fill opacity-50"
-                />
+              <img
+                src={espera}
+                alt="En espera"
+                object-fill
+                className="object-fill opacity-50"
+              />
             )}
 
             {/* Logo */}
@@ -324,8 +358,20 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
               />
             </div>
 
+            {needsManualFullscreenTap && !isFullscreen && (
+              <button
+                onClick={toggleFullscreen}
+                className="absolute inset-0 bg-slate-950/85 flex flex-col items-center justify-center gap-3 text-white cursor-pointer z-20"
+              >
+                <Maximize className="w-8 h-8" />
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  Toca para ver en pantalla completa
+                </span>
+              </button>
+            )}
+
             {/* === RENDERIZA DISEÑO 2 SÓLO EN FULLSCREEN === */}
-            {isFullscreen && videoTrack && renderFullscreenProgress()}
+            {/* isFullscreen && videoTrack && renderFullscreenProgress()*/}
 
             {/* Controles Inferiores (Video) */}
             {videoTrack && (
@@ -379,7 +425,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
         </div>
 
         {/* === RENDERIZA DISEÑO 1 SÓLO FUERA DE FULLSCREEN === */}
-        {!isFullscreen && videoTrack && renderNormalProgress()}
+        {/*!isFullscreen && videoTrack && renderNormalProgress()*/}
       </div>
 
       {/* OVERLAY DE AUDIO BLOQUEADO */}
