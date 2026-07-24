@@ -80,9 +80,9 @@ export function LiveRoom({
           data-lk-theme="default"
           options={{
             adaptiveStream: true,
-            dynacast: true,
+            dynacast: false,
             publishDefaults: {
-              simulcast: true,
+              simulcast: false,
               videoCodec: "h264",
               videoEncoding: VideoPresets.h720.encoding,
               degradationPreference: "maintain-framerate",
