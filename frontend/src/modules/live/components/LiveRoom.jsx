@@ -68,8 +68,8 @@ export function LiveRoom({
             isTechnician
               ? {
                   facingMode: "environment",
-                  width: { ideal: 1920 },
-                  height: { ideal: 1080 },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
                   frameRate: { ideal: 30 },
                 }
               : false
@@ -84,7 +84,7 @@ export function LiveRoom({
             publishDefaults: {
               simulcast: true,
               videoCodec: "h264",
-              videoEncoding: VideoPresets.h1080.encoding,
+              videoEncoding: VideoPresets.h720.encoding,
               degradationPreference: "maintain-framerate",
             },
           }}
