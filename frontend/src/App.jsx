@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { useAuth } from "./hooks/useAuth";
@@ -22,6 +22,9 @@ import { TechnicianKiosk } from "@modules/live/pages/TechnicianKiosk";
 
 export default function App() {
   const { authUser, setAuthUser, isCheckingAuth, handleLogout } = useAuth();
+  const [participantSuffix] = useState(() =>
+    Math.random().toString(36).slice(2, 8),
+  );
   const {
     users,
     tickets,
@@ -31,7 +34,7 @@ export default function App() {
     fetchData,
     handleStatusChange,
     handleAddComment,
-    myProjects
+    myProjects,
   } = useAppData(authUser);
 
   useEffect(() => {
@@ -77,9 +80,9 @@ export default function App() {
     return (
       <LiveRoom
         roomName={room}
-        participantName={`${participantName} (${label})`}
+        participantName={`${participantName} (${label}) #${participantSuffix}`}
         isTechnician={isTechnician}
-        isSpectator={isSpectator} // <-- Pasamos el estado de espectador a la sala
+        isSpectator={isSpectator}
       />
     );
   }

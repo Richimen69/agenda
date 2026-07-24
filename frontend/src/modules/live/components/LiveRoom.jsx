@@ -64,11 +64,30 @@ export function LiveRoom({
           // Para el técnico forzamos la cámara TRASERA (environment) porque
           // el celular va en el arnés viendo hacia afuera — sin esto, LiveKit
           // pide por default la cámara frontal (facingMode: "user").
-          video={isTechnician ? { facingMode: "environment" } : false}
+          video={
+            isTechnician
+              ? {
+                  facingMode: "environment",
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                  frameRate: { ideal: 30 },
+                }
+              : false
+          }
           audio={isTechnician} // El espectador/cliente no publica audio al entrar para evitar auricular
           token={token}
           serverUrl={LIVEKIT_SERVER_URL}
           data-lk-theme="default"
+          options={{
+            adaptiveStream: true,
+            dynacast: true,
+            publishDefaults: {
+              simulcast: true,
+              videoCodec: "vp9",
+              videoEncoding: VideoPresets.h1080.encoding,
+              degradationPreference: "maintain-framerate",
+            },
+          }}
         >
           {isTechnician ? (
             <TechnicianLayout sessionId={roomName} kioskMode={kioskMode} />
