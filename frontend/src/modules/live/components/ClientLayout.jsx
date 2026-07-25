@@ -12,14 +12,16 @@ import {
   Mic,
   MicOff,
   Volume2,
+  VolumeX,
   Maximize,
   Minimize,
   Check,
-  Activity,
+  PhoneCall,
 } from "lucide-react";
 import { SessionFinished } from "../components/ConnectionStatus";
 import espera from "@assets/espera.png";
 import logo from "@assets/logo.png";
+import { getTechnicianIntroVideoUrl } from "../utils/liveUrls";
 
 export function ClientLayout({ sessionId, isSpectator = false }) {
   const room = useRoomContext();
@@ -27,7 +29,8 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
   const videoTrack = cameraTracks[0];
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   const { canPlayAudio, startAudio } = useAudioPlayback(room);
-
+  const [introFinished, setIntroFinished] = useState(false);
+  const [introMuted, setIntroMuted] = useState(true);
   const [session, setSession] = useState(null);
   const [currentStageId, setCurrentStageId] = useState(null);
   const videoContainerRef = useRef(null);
@@ -156,6 +159,9 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
       </div>
     );
   }
+  const introVideoUrl = session?.technician?.id
+    ? getTechnicianIntroVideoUrl(session.technician.id)
+    : null;
 
   if (session.status === "FINISHED")
     return <SessionFinished session={session} />;
@@ -350,7 +356,28 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
   `}
           >
             {/* Player */}
-            {videoTrack ? (
+            {!introFinished && introVideoUrl ? (
+              <div className="relative w-full h-full">
+                <video
+                  src={introVideoUrl}
+                  autoPlay
+                  muted={introMuted}
+                  playsInline
+                  onEnded={() => setIntroFinished(true)}
+                  onError={() => setIntroFinished(true)}
+                  className="w-full h-full object-cover"
+                />
+                {introMuted && (
+                  <button
+                    onClick={() => setIntroMuted(false)}
+                    className="absolute bottom-4 right-4 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 px-3 py-2 rounded-lg text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <VolumeX className="w-4 h-4" />
+                    Activar sonido
+                  </button>
+                )}
+              </div>
+            ) : videoTrack ? (
               <VideoTrack
                 trackRef={videoTrack}
                 className="w-full h-full object-contain"

@@ -40,6 +40,12 @@ export function copyTechnicianKioskUrl(user) {
   });
 }
 
+const VIDEO_CDN_BASE_URL =
+  "https://pub-db171f9fe99248018126843a3a1dda44.r2.dev";
+export function getTechnicianIntroVideoUrl(technicianId) {
+  return `${VIDEO_CDN_BASE_URL}/tecnicos/${technicianId}.mp4`;
+}
+
 export const shareSessionViaWhatsApp = async (session) => {
   try {
     const { clientUrl } = getSessionUrls(session);
