@@ -394,13 +394,15 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
             )}
 
             {/* Logo */}
-            <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 pointer-events-none">
-              <img
-                src={logo}
-                alt="Logo"
-                className="w-20 md:w-32 lg:w-44 drop-shadow-md"
-              />
-            </div>
+            {introFinished && videoTrack && (
+              <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 pointer-events-none">
+                <img
+                  src={logo}
+                  alt="Logo"
+                  className="w-20 md:w-32 lg:w-44 drop-shadow-md"
+                />
+              </div>
+            )}
 
             {needsManualFullscreenTap && !isFullscreen && (
               <button
