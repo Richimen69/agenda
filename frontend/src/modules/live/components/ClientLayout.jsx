@@ -383,12 +383,14 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <img
-                src={espera}
-                alt="En espera"
-                object-fill
-                className="object-fill opacity-50"
-              />
+              introFinished && (
+                <img
+                  src={espera}
+                  alt="En espera"
+                  object-fill
+                  className="object-fill opacity-50"
+                />
+              )
             )}
 
             {/* Logo */}
@@ -416,7 +418,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
             {/* isFullscreen && videoTrack && renderFullscreenProgress()*/}
 
             {/* Controles Inferiores (Video) */}
-            {videoTrack && (
+            {videoTrack && introFinished && (
               <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 z-10 bg-gradient-to-t from-slate-900/95 via-slate-900/40 to-transparent">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   {!isSpectator && (
