@@ -177,7 +177,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
   // DISEÑO 1: PANTALLA NORMAL (Blanco, Detallado, Vertical en Desktop)
   // =====================================================================
   const renderNormalProgress = () => (
-    <div className="w-full lg:w-[320px] xl:w-[360px] bg-white p-4 lg:p-6 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-200 shrink-0 overflow-y-auto z-0 transition-all duration-300">
+    <div className="w-full lg:w-[320px] xl:w-90 bg-white p-4 lg:p-6 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-200 shrink-0 overflow-y-auto z-0 transition-all duration-300">
       <div className="flex items-center justify-between mb-4 lg:mb-6">
         <div>
           <h3 className="text-sm lg:text-base font-black text-gray-900 tracking-tight">
@@ -213,7 +213,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
           return (
             <div
               key={s.id}
-              className="flex lg:flex-row flex-col items-center lg:items-start flex-1 lg:flex-none min-w-[65px] group"
+              className="flex lg:flex-row flex-col items-center lg:items-start flex-1 lg:flex-none min-w-16.25 group"
             >
               <div className="flex flex-col items-center">
                 <div
@@ -351,7 +351,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
     bg-slate-950 flex items-center justify-center overflow-hidden group
     ${
       isFullscreen
-        ? "fixed inset-0 z-[9999] w-full h-[100dvh]" /* <-- Magia para iOS */
+        ? "fixed inset-0 z-9999 w-full h-dvh" /* <-- Magia para iOS */
         : "relative flex-1 w-full h-full"
     }
   `}
@@ -414,7 +414,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
 
             {/* Controles Inferiores (Video) */}
             {videoTrack && introFinished && (
-              <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 z-10 bg-gradient-to-t from-slate-900/95 via-slate-900/40 to-transparent">
+              <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 z-10 bg-linear-to-t from-slate-900/95 via-slate-900/40 to-transparent">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   {!isSpectator && (
                     <button
