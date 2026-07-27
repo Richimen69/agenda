@@ -35,6 +35,7 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
   const [currentStageId, setCurrentStageId] = useState(null);
   const videoContainerRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const introVideoRef = useRef(null);
   const [needsManualFullscreenTap, setNeedsManualFullscreenTap] =
     useState(false);
   console.log(session);
@@ -360,22 +361,14 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
               <div className="relative w-full h-full">
                 <video
                   src={introVideoUrl}
+                  ref={introVideoRef}
                   autoPlay
-                  muted={introMuted}
+                  muted={!canPlayAudio}
                   playsInline
                   onEnded={() => setIntroFinished(true)}
                   onError={() => setIntroFinished(true)}
                   className="w-full h-full object-cover"
                 />
-                {introMuted && (
-                  <button
-                    onClick={() => setIntroMuted(false)}
-                    className="absolute bottom-4 right-4 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/50 px-3 py-2 rounded-lg text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg"
-                  >
-                    <VolumeX className="w-4 h-4" />
-                    Activar sonido
-                  </button>
-                )}
               </div>
             ) : videoTrack ? (
               <VideoTrack
@@ -488,7 +481,13 @@ export function ClientLayout({ sessionId, isSpectator = false }) {
             para escuchar la bahía en vivo.
           </p>
           <button
-            onClick={startAudio}
+            onClick={() => {
+              startAudio();
+              if (introVideoRef.current) {
+                introVideoRef.current.muted = false;
+                introVideoRef.current.play().catch(() => {});
+              }
+            }}
             className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-[10px] md:text-xs py-3 px-5 md:py-3.5 md:px-6 rounded-xl shadow-lg cursor-pointer transition-transform active:scale-95"
           >
             ACTIVAR AUDIO 🔊
