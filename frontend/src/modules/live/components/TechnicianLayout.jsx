@@ -4,7 +4,6 @@ import {
   useLocalParticipant,
   useMediaDeviceSelect,
   useRoomContext,
-  RoomAudioRenderer,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import {
@@ -29,42 +28,9 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
     useLocalParticipant();
   const wakeLockRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const lastVoiceTriggerRef = useRef(0);
 
-  const [kioskStarted, setKioskStarted] = useState(false);
-  const [voiceConfirmation, setVoiceConfirmation] = useState(false);
-
-  const startKioskSession = async () => {
-    try {
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
-      audioContextRef.current = new AudioContextClass();
-      await audioContextRef.current.resume();
-    } catch (err) {
-      console.warn("No se pudo desbloquear el audio:", err);
-    }
-
-    try {
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      }
-    } catch (err) {
-      console.warn("No se pudo activar pantalla completa:", err);
-    }
-
-    try {
-      if ("wakeLock" in navigator) {
-        wakeLockRef.current = await navigator.wakeLock.request("screen");
-      }
-    } catch (err) {
-      console.warn("No se pudo mantener la pantalla encendida:", err);
-    }
-
-    setKioskStarted(true);
-  };
-
+  // En modo kiosco (dispositivo fijo del técnico): pantalla completa y
+  // "no apagar pantalla" automáticos, sin que el técnico toque nada.
   useEffect(() => {
     if (!kioskMode) return;
 
@@ -87,6 +53,8 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
 
     goFullscreenAndLock();
 
+    // El wake lock se libera si el navegador cambia de pestaña/minimiza;
+    // lo volvemos a pedir en cuanto el dispositivo regresa a primer plano.
     const handleVisibility = async () => {
       if (document.visibilityState === "visible" && "wakeLock" in navigator) {
         try {
@@ -104,6 +72,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
     };
   }, [kioskMode]);
 
+  // Estados para controlar los datos asíncronos de Postgres (Prisma)
   const [session, setSession] = useState(null);
   const [currentStageId, setCurrentStageId] = useState(null);
   const [loadingStage, setLoadingStage] = useState(false);
@@ -120,11 +89,13 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
     setActiveMediaDevice: setActiveMic,
   } = useMediaDeviceSelect({ kind: "audioinput" });
 
+  // 1. Cargar datos de la sesión de la base de datos
   useEffect(() => {
     async function loadSession() {
       if (!sessionId) return;
       try {
         const sessionData = await getLiveSessionById(sessionId);
+
         setSession(sessionData);
         setCurrentStageId(sessionData.currentStageId);
       } catch (error) {
@@ -134,12 +105,15 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
     loadSession();
   }, [sessionId]);
 
+  // 2. Cambiar de etapa dinámicamente
   const handleStageChange = async (stageId) => {
     setLoadingStage(true);
     try {
+      // A. Guardamos en Postgres (Prisma)
       await updateLiveSessionStage(room.name, stageId);
       setCurrentStageId(stageId);
 
+      // B. Emitimos el evento de datos en tiempo real al cliente por LiveKit
       const encoder = new TextEncoder();
       const payload = encoder.encode(
         JSON.stringify({ type: "stage_change", stageId }),
@@ -153,6 +127,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
     }
   };
 
+  // 3. Finalizar el mantenimiento por completo
   const handleEndMaintenance = async () => {
     if (
       !confirm(
@@ -165,8 +140,14 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
       alert("Mantenimiento finalizado con éxito.");
 
       if (kioskMode) {
-        // no navegamos, el kiosco no tiene rutas internas
+        // No navegamos a ningún lado: el kiosco no tiene login ni rutas
+        // internas. El useTechnicianSession del dispositivo detecta solo
+        // que la sesión ya no está activa y regresa a la pantalla de espera.
       } else {
+        // Fuera del kiosco (link manual o ruta interna /live-tech), sí
+        // tiene sentido volver al panel. Usamos window.location en vez de
+        // useNavigate porque este componente también se monta fuera del
+        // <BrowserRouter> (en el bloque de interceptación de App.jsx).
         window.location.href = "/live";
       }
     } catch (error) {
@@ -175,145 +156,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
     }
   };
 
-  const stages = session?.serviceType?.stages || [];
-  const currentActiveStageIdx = stages.findIndex(
-    (s) => s.id === currentStageId,
-  );
-  const isLastStage = currentActiveStageIdx === stages.length - 1;
-
-  const advanceToNextStage = () => {
-    if (isLastStage || !stages.length) return;
-    handleStageChange(stages[currentActiveStageIdx + 1]?.id);
-
-    try {
-      const ctx = audioContextRef.current;
-      if (ctx) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      }
-    } catch (err) {
-      console.warn("No se pudo reproducir el beep de confirmación:", err);
-    }
-
-    setVoiceConfirmation(true);
-    setTimeout(() => setVoiceConfirmation(false), 2500);
-  };
-
-  useEffect(() => {
-    if (!kioskMode) return;
-
-    const handleKeyDown = (e) => {
-      switch (e.key) {
-        case "1":
-          advanceToNextStage();
-          break;
-        case "2":
-          localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
-          break;
-        case "3":
-          localParticipant.setCameraEnabled(!isCameraEnabled);
-          break;
-        default:
-          break;
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    kioskMode,
-    stages,
-    currentActiveStageIdx,
-    isLastStage,
-    isMicrophoneEnabled,
-    isCameraEnabled,
-    localParticipant,
-  ]);
-
-  const STAGE_TRIGGER_PHRASES = [
-    "cambio de etapa",
-    "siguiente etapa",
-    "etapa completada",
-    "avanzar etapa",
-  ];
-  const VOICE_COOLDOWN_MS = 4000;
-
-  useEffect(() => {
-    if (!kioskMode || !kioskStarted) return;
-
-    const SpeechRecognitionAPI =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionAPI) {
-      console.warn(
-        "Este navegador no soporta reconocimiento de voz (Web Speech API).",
-      );
-      return;
-    }
-
-    let stopped = false;
-    const recognition = new SpeechRecognitionAPI();
-    recognition.lang = "es-MX";
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognitionRef.current = recognition;
-
-    recognition.onresult = (event) => {
-      const lastResult = event.results[event.results.length - 1];
-      if (!lastResult.isFinal) return;
-
-      const transcript = lastResult[0].transcript
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-      const matched = STAGE_TRIGGER_PHRASES.some((phrase) =>
-        transcript.includes(phrase),
-      );
-
-      const now = Date.now();
-      if (matched && now - lastVoiceTriggerRef.current > VOICE_COOLDOWN_MS) {
-        lastVoiceTriggerRef.current = now;
-        advanceToNextStage();
-      }
-    };
-
-    recognition.onerror = (event) => {
-      if (event.error === "not-allowed") {
-        console.warn("Permiso de micrófono negado para comandos de voz.");
-        stopped = true;
-      }
-    };
-
-    recognition.onend = () => {
-      if (!stopped && kioskMode) {
-        try {
-          recognition.start();
-        } catch (err) {}
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (err) {
-      console.warn("No se pudo iniciar el reconocimiento de voz:", err);
-    }
-
-    return () => {
-      stopped = true;
-      recognition.onend = null;
-      recognition.stop();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kioskMode, kioskStarted]);
-
+  // Si los datos de Postgres aún no cargan, mostramos un spinner
   if (!session) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-500 bg-gray-50 h-full">
@@ -327,36 +170,24 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
     );
   }
 
+  const stages = session?.serviceType?.stages || [];
+  // Obtenemos la etapa activa actual
+  const currentActiveStageIdx = stages.findIndex(
+    (s) => s.id === currentStageId,
+  );
+
+  // =========================================================================
+  // VISTA DE KIOSCO (celular del técnico): pantalla completa, un solo botón
+  // grande para avanzar de etapa, pensado para tocarse con el pulgar sin
+  // tener que hacer scroll ni buscar la tarjeta correcta entre varias.
+  // =========================================================================
   if (kioskMode) {
     const currentStage = stages[currentActiveStageIdx] || null;
-
-    if (!kioskStarted) {
-      return (
-        <button
-          type="button"
-          onClick={startKioskSession}
-          className="flex flex-col items-center justify-center gap-4 h-full w-full bg-slate-950 text-white cursor-pointer"
-        >
-          <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center shadow-lg shadow-red-900/30">
-            <Play className="w-7 h-7 text-white ml-1" />
-          </div>
-          <div className="text-center px-8">
-            <h2 className="text-base font-black uppercase tracking-wide">
-              Toca para iniciar tu turno
-            </h2>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Un solo toque, al empezar. Después de esto ya no necesitas
-              tocar la pantalla en todo el servicio.
-            </p>
-          </div>
-        </button>
-      );
-    }
+    const isLastStage = currentActiveStageIdx === stages.length - 1;
 
     return (
       <div className="flex flex-col h-full w-full bg-slate-950 text-white overflow-hidden">
-        <RoomAudioRenderer />
-
+        {/* Barra superior mínima */}
         <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800 shrink-0">
           <span className="text-[10px] font-black uppercase tracking-wide bg-red-600 px-2.5 py-1 rounded-lg">
             {session.roomName}
@@ -367,13 +198,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
           </span>
         </div>
 
-        {voiceConfirmation && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
-            <CheckCircle2 className="w-4 h-4" />
-            Etapa actualizada por voz
-          </div>
-        )}
-
+        {/* Video: ocupa todo el espacio disponible */}
         <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-0">
           {isCameraEnabled ? (
             <VideoTrack
@@ -388,6 +213,8 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
           )}
         </div>
 
+        {/* Panel inferior fijo tipo "hoja": etapa actual + acciones grandes,
+            todo dentro del alcance del pulgar sin necesidad de scroll. */}
         <div className="bg-white text-gray-900 px-4 pt-5 pb-6 rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.3)] flex flex-col gap-3 shrink-0">
           <div className="text-center">
             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
@@ -400,6 +227,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
             </h2>
           </div>
 
+          {/* Botón gigante de siguiente etapa — el control principal del técnico */}
           <button
             type="button"
             disabled={loadingStage || !currentStage}
@@ -420,6 +248,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
                 : "Siguiente Etapa"}
           </button>
 
+          {/* Acciones secundarias: mic y finalizar, también grandes */}
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -455,10 +284,12 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8f9fa] text-gray-900 font-sans p-4 gap-6">
-      <RoomAudioRenderer />
-
+      {/* =========================================================================
+          SECCIÓN 1: ENCABEZADO SUPERIOR (Toyota Brand - Tema Blanco)
+          ========================================================================= */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-start gap-4">
+          {/* Logo Toyota Cuadrado */}
           <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
             <svg viewBox="0 0 24 24" width="28" height="28" fill="white">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
@@ -490,6 +321,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
           </div>
         </div>
 
+        {/* Estatus del espectador y Botón de Terminar Servicio */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex flex-col text-right">
             <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wider">
@@ -510,7 +342,11 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
         </div>
       </div>
 
+      {/* =========================================================================
+          SECCIÓN 2: GRID DE DOS COLUMNAS
+          ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 flex-1">
+        {/* COLUMNA IZQUIERDA (3/5): Video + Selectores de Hardware */}
         <div className="lg:col-span-3 flex flex-col gap-4">
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col flex-1 gap-4">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
@@ -518,6 +354,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
               Transmisión en Vivo
             </h3>
 
+            {/* Monitor de video (Fondo oscuro para contraste del video) */}
             <div className="flex-1 bg-slate-950 rounded-xl overflow-hidden aspect-video relative flex items-center justify-center">
               {isCameraEnabled ? (
                 <VideoTrack
@@ -534,6 +371,8 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
               )}
             </div>
 
+            {/* Selectores de Hardware: en modo kiosco se ocultan, ya que el
+                dispositivo es fijo y siempre usa la misma cámara/mic del arnés. */}
             {!kioskMode && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
@@ -571,6 +410,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
               </div>
             )}
 
+            {/* Botones de Muteo */}
             <div className="grid grid-cols-2 gap-3 mt-2">
               <button
                 onClick={() =>
@@ -604,6 +444,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
           </div>
         </div>
 
+        {/* COLUMNA DERECHA (2/5): Checklist dinámico del Procedimiento de Servicio */}
         <div className="lg:col-span-2 flex flex-col">
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col h-full gap-4">
             <div>
@@ -615,6 +456,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
               </p>
             </div>
 
+            {/* Tarjetas de Etapa */}
             <div className="flex-1 space-y-3.5 overflow-y-auto max-h-[50vh] pr-1">
               {stages.map((stage, idx) => {
                 const isCompleted = idx < currentActiveStageIdx;
@@ -656,6 +498,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
                         </p>
                       </div>
 
+                      {/* Icono de estatus / Botones */}
                       <div className="shrink-0 pt-1">
                         {isCompleted && (
                           <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
@@ -673,7 +516,7 @@ export function TechnicianLayout({ sessionId, kioskMode = false }) {
                                   "¡Has completado la última etapa del servicio!",
                                 );
                               } else {
-                                handleStageChange(stages[idx + 1].id);
+                                handleStageChange(stages[idx + 1].id); // Avanza al siguiente paso
                               }
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"

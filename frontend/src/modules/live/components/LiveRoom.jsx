@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LiveKitRoom } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { VideoPresets } from "livekit-client";
 // 1. IMPORTACIÓN DE TU SERVICIO DE ENDPOINTS
@@ -94,6 +94,7 @@ export function LiveRoom({
           ) : (
             <ClientLayout sessionId={roomName} isSpectator={isSpectator} />
           )}
+          <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
     </div>
