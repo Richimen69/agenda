@@ -13,6 +13,7 @@ import AgendaPage from "./modules/agenda/pages/AgendaPage";
 import MarketingPage from "@modules/marketing/pages/MarketingPage";
 import ProyectosPage from "@modules/programas/pages/ProyectosPage";
 import DashboardPage from "@modules/dashboard/pages/DashboardPage";
+import LeadsPage from "./modules/leads/pages/LeadsPage";
 import { sileo, Toaster } from "sileo";
 
 // NUEVAS IMPORTACIONES DEL MÓDULO LIVE
@@ -35,6 +36,7 @@ export default function App() {
     handleStatusChange,
     handleAddComment,
     myProjects,
+    leads
   } = useAppData(authUser);
 
   useEffect(() => {
@@ -169,6 +171,17 @@ export default function App() {
                   authUser={authUser}
                   users={users}
                   onEventsChange={fetchData}
+                />
+              }
+            />
+            <Route
+              path="leads"
+              element={
+                <LeadsPage
+                  authUser={authUser}
+                  leads={leads}
+                  users={users}
+                  onLeadsChange={fetchData}
                 />
               }
             />

@@ -10,26 +10,30 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
 
-    try {
-      const result = await loginUser(email, password);
-      if (result.success) {
-        localStorage.setItem("authUser", JSON.stringify(result.data));
-        onLoginSuccess(result.data);
-      } else {
-        // Formateamos el error para que no sea un texto plano aburrido
-        setError(result.error || "Credenciales inválidas. Verifica tus datos.");
-      }
-    } catch (err) {
-      setError("Error de conexión con el servidor de autenticación.");
-    } finally {
-      setIsLoading(false);
+  try {
+    const result = await loginUser(email, password);
+    console.log("loginUser result:", result); // <- agregar
+
+    if (result.success) {
+      console.log("Login exitoso, llamando onLoginSuccess con:", result.data); // <- agregar
+      localStorage.setItem("authUser", JSON.stringify(result.data));
+      onLoginSuccess(result.data);
+    } else {
+      console.log("Login falló:", result.error); // <- agregar
+      setError(result.error || "Credenciales inválidas. Verifica tus datos.");
     }
-  };
+  } catch (err) {
+    console.log("Excepción atrapada:", err); // <- agregar
+    setError("Error de conexión con el servidor de autenticación.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     // Fondo de la app corporativa

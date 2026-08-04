@@ -4,7 +4,8 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
 }
 
 datasource db {
@@ -13,14 +14,15 @@ datasource db {
 
 // 1. USUARIOS
 model User {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   name          String
-  email         String   @unique
-  password      String   @default("123456") // NUEVO: Contraseña encriptada
+  email         String       @unique
+  password      String       @default("123456") // NUEVO: Contraseña encriptada
   whatsappPhone String
-  role          Role     @default(USER) // NUEVO: Rol del usuario
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  role          Role         @default(USER) // NUEVO: Rol del usuario
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  moduleRoles   ModuleRole[]
 
   createdTickets     Ticket[]         @relation("CreatedTickets")
   assignedTickets    Ticket[]         @relation("AssignedTickets")
@@ -346,6 +348,110 @@ model ServiceStage {
   @@unique([serviceTypeId, order])
 }
 
+model Lead {
+  id       Int      @id @default(autoincrement())
+  date     DateTime @default(now())
+  phone    String?
+  fullName String
+
+  // OPTIMIZACIÓN 1: Enums en lugar de textos libres para evitar errores de dedo
+  department    Department    @default(NUEVOS)
+  contactMethod ContactMethod @default(WHATSAPP)
+
+  agent    String?
+  interest String?
+
+  status       LeadStatus    @default(NUEVO)
+  contactState ContactState?
+
+  // OPTIMIZACIÓN 2: Sistema de Recuperación
+  needsRecovery  Boolean         @default(false) // Activa la alerta para la chica de recuperación
+  recoveryStatus RecoveryStatus? // Estado exacto de la recuperación
+  lostReason     String? // Ej. "Su número se encuentra fuera de servicio"
+
+  firstContactTime Float?
+  assignment       String?
+
+  hasAppointment Boolean @default(false)
+  showedUp       Boolean @default(false)
+  hasQuote       Boolean @default(false)
+  amount         Float?
+
+  source      String // Ej. "CAMPAÑA PRIUS"
+  isReturning Boolean         @default(false)
+  branch      Branch          @default(GUERRERO)
+  captureView CaptureViewType @default(ALL)
+  // OPTIMIZACIÓN 3: Historial de comentarios relacional
+  comments    LeadComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([source])
+  @@index([status])
+  @@index([needsRecovery])
+  @@index([phone])
+}
+
+model LeadComment {
+  id   String @id @default(uuid())
+  text String @db.Text
+
+  leadId Int
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  author    String // Ej. "Asesor" o "Recuperación"
+  createdAt DateTime @default(now())
+}
+
+enum ModuleRole {
+  LEADS_ADMIN
+  LEADS_AUX
+  LEADS_RESPONSABLE
+}
+
+enum Department {
+  NUEVOS
+  SEMINUEVOS
+  SERVICIO
+  OPERADOR
+  REFACCIONES
+  DIGITAL
+}
+
+enum Branch {
+  GUERRERO
+  CHILPANCINGO
+  DIGITAL
+}
+
+enum ContactMethod {
+  WHATSAPP
+  LLAMADA
+  FACEBOOK_MESSENGER
+  INSTAGRAM
+}
+
+enum LeadStatus {
+  NUEVO
+  ATENDIDO
+  AGENDADO
+  PERDIDO
+}
+
+enum RecoveryStatus {
+  EN_SEGUIMIENTO
+  NO_CONTACTABLE
+  RECUPERADO_Y_ASIGNADO
+  DESCARTADO
+}
+
+enum ContactState {
+  R1_POR_CONTACTAR
+  R2_CONTACTADO
+}
+
 enum SessionStatus {
   WAITING
   ACTIVE
@@ -369,6 +475,11 @@ enum ReminderStatus {
 enum Role {
   ADMIN
   USER
+}
+
+enum CaptureViewType {
+  ALL
+  NS
 }
 
 enum Priority {

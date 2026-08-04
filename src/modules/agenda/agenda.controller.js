@@ -1,5 +1,5 @@
-// src/agenda.controller.js
-import prisma from "./prisma.js";
+import prisma from '#config/prisma';
+
 
 export const createEvent = async (req, res) => {
   try {

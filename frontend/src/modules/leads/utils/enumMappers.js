@@ -1,0 +1,84 @@
+import * as XLSX from "xlsx"; // si ya lo tienes importado en otro lado, quita esta línea
+
+// --- DEPARTMENT ---
+// Excel (AREA) -> Prisma enum Department
+const DEPARTMENT_MAP = {
+  "NUEVOS": "NUEVOS",
+  "COMONUEVOS": "SEMINUEVOS",           // <- no coinciden textualmente
+  "CITAS DE SERVICIO": "SERVICIO",       // <- no coinciden textualmente
+  "OPERADOR": "OPERADOR",
+  "REFACCIONES": "REFACCIONES",
+  "DIGITAL": "DIGITAL",
+};
+
+// --- BRANCH ---
+const BRANCH_MAP = {
+  "GUERRERO": "GUERRERO",
+  "CHILPANCINGO": "CHILPANCINGO",
+  "TOYOTA DIGITAL": "DIGITAL",           // <- no coinciden textualmente
+  "DIGITAL": "DIGITAL",
+};
+
+// --- LEAD STATUS ---
+// Ojo: tu Excel tiene "ASIGNADO" y el enum NO lo contempla.
+// Se mapea a NUEVO por defecto (asignado a un asesor pero aún sin
+// atención registrada) — pero se marca como advertencia para que
+// el usuario decida caso por caso si prefiere ATENDIDO.
+const STATUS_MAP = {
+  "NUEVO": "NUEVO",
+  "ATENDIDO": "ATENDIDO",
+  "AGENDADO": "AGENDADO",
+  "PERDIDO": "PERDIDO",
+  "ASIGNADO": "NUEVO", // decisión por defecto, ver nota abajo
+};
+
+/**
+ * Normaliza un valor libre contra un diccionario de enum.
+ * Devuelve { value, wasUnmapped, original } para poder marcar advertencias.
+ */
+function mapToEnum(rawValue, map, fallback) {
+  const key = String(rawValue ?? "").trim().toUpperCase();
+  if (map[key]) {
+    return { value: map[key], wasUnmapped: false, original: rawValue };
+  }
+  return { value: fallback, wasUnmapped: true, original: rawValue };
+}
+
+export function normalizeDepartment(value) {
+  return mapToEnum(value, DEPARTMENT_MAP, "NUEVOS");
+}
+
+export function normalizeBranch(value) {
+  return mapToEnum(value, BRANCH_MAP, "GUERRERO");
+}
+
+export function normalizeStatus(value) {
+  return mapToEnum(value, STATUS_MAP, "NUEVO");
+}
+
+/**
+ * "NA" es un valor real en tu columna ASIGNACIÓN que significa "sin asignar",
+ * no un nombre. Lo convertimos a null en vez de guardarlo literal.
+ */
+export function normalizeAssignment(value) {
+  const v = String(value ?? "").trim();
+  return v === "" || v.toUpperCase() === "NA" ? null : v;
+}
+
+/**
+ * firstContactTime llega como string ("6") pero el schema pide Float.
+ */
+export function normalizeFloat(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const num = Number(value);
+  return isNaN(num) ? null : num;
+}
+
+/**
+ * source es requerido (String, sin "?") en el schema. Si viene vacío,
+ * no podemos mandar "" silenciosamente sin que el usuario lo sepa.
+ */
+export function normalizeSource(value) {
+  const v = String(value ?? "").trim();
+  return v === "" ? "SIN ORIGEN" : v;
+}

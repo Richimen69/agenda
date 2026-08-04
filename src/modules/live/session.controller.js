@@ -1,5 +1,6 @@
 import { AccessToken } from "livekit-server-sdk";
-import prisma from "./prisma.js";
+import prisma from '#config/prisma';
+
 
 // 1. Obtener TODAS las sesiones (Para el listado de tu panel administrativo)
 export const getLiveSessions = async (req, res) => {
@@ -225,5 +226,27 @@ export const createServiceType = async (req, res) => {
   } catch (error) {
     console.error("Error al crear tipo de servicio dinámico:", error);
     res.status(500).json({ error: "Failed to create service type" });
+  }
+};
+
+export const getKioskSession = async (req, res) => {
+  const { technicianId } = req.params;
+  try {
+    const session = await prisma.liveSession.findFirst({
+      where: { technicianId, status: { in: ["WAITING", "ACTIVE"] } },
+      select: {
+        id: true,
+        roomName: true,
+        status: true,
+        customerName: true,
+        vehicleModel: true,
+        currentStage: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ success: true, data: session });
+  } catch (error) {
+    console.error("Error al obtener sesión del kiosco:", error);
+    res.status(500).json({ success: false, error: "Error al obtener sesión del kiosco" });
   }
 };

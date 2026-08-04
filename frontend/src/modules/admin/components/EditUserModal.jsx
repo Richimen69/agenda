@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Check } from "lucide-react";
+import { X, Plus, Trash2, Check, CircleAlert } from "lucide-react";
 import { sileo } from "sileo";
 import { getUsersById, updateUser } from "../services/users.api";
+
+const MODULE_ROLE_GROUPS = [
+  {
+    label: "Leads",
+    roles: [
+      { value: "LEADS_ADMIN", label: "Administrador" },
+      { value: "LEADS_AUX", label: "Auxiliar / Recuperación" },
+      { value: "LEADS_RESPONSABLE", label: "Responsable (asignable en leads)" },
+    ],
+  },
+];
 
 export default function EditUserModal({
   isOpen,
@@ -21,20 +32,29 @@ export default function EditUserModal({
     const fetchUserData = async () => {
       try {
         const result = await getUsersById(userId);
-        if (isMounted) {
-          setUserData(result);
-        }
+        if (isMounted) setUserData(result);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
     };
-    if (userId) {
-      fetchUserData();
-    }
+    if (userId) fetchUserData();
     return () => {
       isMounted = false;
     };
   }, [userId]);
+
+  const toggleModuleRole = (roleValue) => {
+    setUserData((prev) => {
+      const current = prev.moduleRoles || [];
+      const has = current.includes(roleValue);
+      return {
+        ...prev,
+        moduleRoles: has
+          ? current.filter((r) => r !== roleValue)
+          : [...current, roleValue],
+      };
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +69,7 @@ export default function EditUserModal({
       if (result.success) {
         sileo.success({
           title: "Usuario Actualizado",
-          description: name + " " + "Actualizado correctamente",
+          description: `${userData.name} actualizado correctamente`,
           fill: "#D8F3DC",
           styles: {
             title: "text-black/75!",
@@ -63,7 +83,7 @@ export default function EditUserModal({
     } catch (error) {
       sileo.error({
         title: "Error",
-        description: result.error,
+        description: error.message,
         fill: "#EB0A1E",
         icon: <CircleAlert className="size-4.5" />,
         styles: {
@@ -173,6 +193,39 @@ export default function EditUserModal({
                 </optgroup>
               ))}
             </select>
+          </div>
+          <div className="flex flex-col gap-3">
+            <span className="text-sm font-medium text-content-main">
+              Accesos por módulo
+            </span>
+            {MODULE_ROLE_GROUPS.map((group) => (
+              <div
+                key={group.label}
+                className="border border-layout-border rounded-md p-3"
+              >
+                <p className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-2">
+                  {group.label}
+                </p>
+                <div className="space-y-1.5">
+                  {group.roles.map((role) => (
+                    <label
+                      key={role.value}
+                      className="flex items-center gap-2 text-sm text-content-main cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(userData.moduleRoles || []).includes(
+                          role.value,
+                        )}
+                        onChange={() => toggleModuleRole(role.value)}
+                        className="w-4 h-4 text-brand rounded focus:ring-brand cursor-pointer"
+                      />
+                      {role.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </form>
 

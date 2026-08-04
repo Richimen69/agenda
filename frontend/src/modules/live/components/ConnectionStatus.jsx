@@ -36,7 +36,7 @@ export function SessionFinished({ session }) {
   return (
     <div className="w-full h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="h-1.5 bg-gradient-to-r from-red-600 via-red-500 to-red-600" />
+        <div className="h-1.5 bg-linear-to-r from-red-600 via-red-500 to-red-600" />
 
         <div className="p-8 text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">

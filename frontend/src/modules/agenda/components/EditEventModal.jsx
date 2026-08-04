@@ -21,7 +21,6 @@ const EditEventModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    console.log(evento.id)
     if (isOpen) {
       const dateObj = new Date(evento.scheduledAt);
       const localDate = new Date(dateObj.getTime() - 6 * 60 * 60 * 1000);

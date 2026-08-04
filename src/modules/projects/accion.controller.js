@@ -1,4 +1,4 @@
-import prisma from "./prisma.js";
+import prisma from '#config/prisma';
 
 export const crearAccion = async (req, res) => {
   try {

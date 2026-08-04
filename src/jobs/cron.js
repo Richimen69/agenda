@@ -1,5 +1,6 @@
 import cron from 'node-cron';
-import prisma from './prisma.js';
+import prisma from '#config/prisma';
+
 import { whatsappQueue } from './queue.js';
 
 // Se ejecuta cada minuto ('* * * * *')

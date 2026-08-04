@@ -23,8 +23,6 @@ export function CreateSessionForm({
   onSuccess,
 }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
-  console.log(users);
-
   const updateField = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
   };

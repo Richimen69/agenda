@@ -2,27 +2,39 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 
-// 1. Mantenemos la bandera de estado
 let isClientReady = false;
-let client = null; // Dejamos la variable mutable para poder reasignarla
+let client = null;
 
-// 2. Envolvemos la inicialización en una función reutilizable
+// Evita loops infinitos de reinicio si el problema es persistente
+// (ej. versión de WhatsApp Web incompatible) en vez de fallar en bucle.
+let restartAttempts = 0;
+const MAX_RESTART_ATTEMPTS = 5;
+const RESTART_BASE_DELAY_MS = 5000; // backoff exponencial: 5s, 10s, 20s, 40s...
+
 const inicializarWhatsApp = () => {
   console.log('[WhatsApp] Iniciando una nueva instancia del cliente...');
 
   client = new Client({
     authStrategy: new LocalAuth(),
+    // FIX PRINCIPAL: sin esto, whatsapp-web.js usa una versión cacheada
+    // del bundle de WhatsApp Web que puede no coincidir con la actual,
+    // causando el "Execution context was destroyed" en la inyección.
+    webVersionCache: {
+      type: 'remote',
+      remotePath:
+        'https://raw.githubusercontent.com/wwebjs/wwebjs.dev/main/html/2.3000.1023917366-alpha.html',
+    },
     puppeteer: {
       args: [
-        '--no-sandbox', 
+        '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--disable-gpu'
-      ]
-    }
+        '--disable-gpu',
+      ],
+    },
   });
 
   client.on('qr', (qr) => {
@@ -33,6 +45,7 @@ const inicializarWhatsApp = () => {
   client.on('ready', () => {
     console.log('[WhatsApp] Cliente conectado y listo para enviar mensajes!');
     isClientReady = true;
+    restartAttempts = 0; // se conectó bien, reseteamos el contador de reintentos
   });
 
   client.on('auth_failure', (msg) => {
@@ -40,28 +53,54 @@ const inicializarWhatsApp = () => {
     isClientReady = false;
   });
 
-  // 3. Autorecuperación real destruyendo y creando una NUEVA instancia
   client.on('disconnected', async (reason) => {
     console.log('[WhatsApp] Cliente desconectado. Razón:', reason);
-    isClientReady = false; 
-    
+    isClientReady = false;
+
     console.log('[WhatsApp] Limpiando la instancia dañada...');
     try {
       await client.destroy();
-      console.log('[WhatsApp] Instancia antigua destruida con éxito. Reiniciando...');
-      inicializarWhatsApp(); // <- Aquí llamamos a la función para crear un cliente nuevo
+      console.log('[WhatsApp] Instancia antigua destruida con éxito.');
     } catch (err) {
-      console.error('[WhatsApp] Error crítico al destruir el cliente viejo:', err);
+      console.error('[WhatsApp] Error al destruir el cliente viejo:', err);
     }
+
+    scheduleRestart();
   });
 
-  client.initialize();
+  // FIX PRINCIPAL: capturar el error de initialize() para que no tumbe
+  // el proceso completo. Antes esto no tenía .catch() y por eso el
+  // ProtocolError mataba el servidor entero en vez de solo el cliente WA.
+  client.initialize().catch((err) => {
+    console.error('[WhatsApp] Error al inicializar el cliente:', err.message);
+    isClientReady = false;
+    scheduleRestart();
+  });
 };
 
-// Arrancamos el servicio por primera vez
+function scheduleRestart() {
+  if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+    console.error(
+      `[WhatsApp] Se alcanzó el máximo de ${MAX_RESTART_ATTEMPTS} reintentos. ` +
+        'No se reintentará automáticamente. Revisa la versión de whatsapp-web.js ' +
+        'o borra la carpeta .wwebjs_auth antes de reiniciar manualmente.',
+    );
+    return;
+  }
+
+  const delay = RESTART_BASE_DELAY_MS * Math.pow(2, restartAttempts);
+  restartAttempts += 1;
+  console.log(
+    `[WhatsApp] Reintentando en ${delay / 1000}s (intento ${restartAttempts}/${MAX_RESTART_ATTEMPTS})...`,
+  );
+
+  setTimeout(() => {
+    inicializarWhatsApp();
+  }, delay);
+}
+
 inicializarWhatsApp();
 
-// 4. Tu función de envío de mensajes queda intacta
 export const sendWhatsAppMessage = async (phone, message) => {
   if (!isClientReady || !client) {
     throw new Error('El cliente de WhatsApp no está listo o se encuentra desconectado.');
@@ -77,8 +116,6 @@ export const sendWhatsAppMessage = async (phone, message) => {
   }
 };
 
-
-// Función para apagar el bot por completo
 export const detenerWhatsApp = async () => {
   if (client) {
     console.log('[WhatsApp] Apagando el cliente y cerrando navegador...');
@@ -86,6 +123,7 @@ export const detenerWhatsApp = async () => {
       await client.destroy();
       client = null;
       isClientReady = false;
+      restartAttempts = 0;
       console.log('[WhatsApp] Bot completamente apagado.');
     } catch (error) {
       console.error('[WhatsApp] Error al intentar apagar el cliente:', error);
@@ -98,16 +136,15 @@ export const detenerWhatsApp = async () => {
 export const getStatusWhatsApp = () => {
   return {
     activo: client !== null,
-    listoParaEnviar: isClientReady
+    listoParaEnviar: isClientReady,
   };
 };
 
-// Función para volver a encenderlo cuando quieras
 export const encenderWhatsApp = () => {
   if (!client) {
+    restartAttempts = 0;
     inicializarWhatsApp();
   } else {
     console.log('[WhatsApp] El bot ya está encendido o iniciándose.');
   }
 };
-

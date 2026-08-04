@@ -1,5 +1,7 @@
-import prisma from "./prisma.js";
+import prisma from "#config/prisma";
+
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 // 1. LOGIN
 export const login = async (req, res) => {
@@ -7,21 +9,54 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, error: "Usuario no encontrado" });
+    if (!user) {
+      return res.status(404).json({ success: false, error: "Usuario no encontrado" });
+    }
 
-    // Comparamos la contraseña enviada con la encriptada en la BD
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, error: "Usuario desactivado" });
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword)
-      return res
-        .status(401)
-        .json({ success: false, error: "Contraseña incorrecta" });
+    if (!isValidPassword) {
+      return res.status(401).json({ success: false, error: "Contraseña incorrecta" });
+    }
 
-    // Quitamos el password antes de enviarlo al frontend por seguridad
+    // Payload del token: lo mínimo necesario para autorizar requests futuros
+    const token = jwt.sign(
+      {
+        id: user.id,
+        role: user.role,
+        moduleRoles: user.moduleRoles,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
+    );
+
     const { password: _, ...userWithoutPassword } = user;
-    res.json({ success: true, data: userWithoutPassword });
+    res.json({ success: true, data: { user: userWithoutPassword, token } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getMe = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        moduleRoles: true,
+        whatsappPhone: true,
+        area: { select: { id: true, name: true } },
+      },
+    });
+    if (!user) return res.status(404).json({ success: false, error: "Usuario no encontrado" });
+    res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -59,8 +94,13 @@ export const createUser = async (req, res) => {
 
 // 3. OBTENER TODOS LOS USUARIOS
 export const getUsers = async (req, res) => {
+  const { moduleRoles } = req.query; // ej. ?moduleRoles=LEADS_RESPONSABLE,LEADS_ADMIN
+
   try {
     const users = await prisma.user.findMany({
+      where: moduleRoles
+        ? { moduleRoles: { hasSome: moduleRoles.split(",") } }
+        : undefined, // sin el query param, se comporta exactamente como antes (trae todos)
       select: {
         id: true,
         area: {
@@ -73,6 +113,7 @@ export const getUsers = async (req, res) => {
         email: true,
         whatsappPhone: true,
         role: true,
+        moduleRoles: true, // opcional, útil si el frontend quiere mostrar el rol del módulo
         isActive: true,
       },
     });
@@ -150,16 +191,24 @@ export const hardDeleteUser = async (req, res) => {
 export const editUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, areaId, whatsappPhone } = req.body;
+    const { name, email, role, areaId, whatsappPhone, moduleRoles } = req.body;
 
+    const data = { name, email, areaId, whatsappPhone }; // <- declaración necesaria
+    console.log("req.user:", req.user);
+
+    if (req.user?.role === "ADMIN") {
+      if (role !== undefined) data.role = role;
+      if (moduleRoles !== undefined) data.moduleRoles = moduleRoles;
+    }
     const user = await prisma.user.update({
       where: { id },
-      data: { name, email, role, areaId, whatsappPhone },
+      data,
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        moduleRoles: true,
         whatsappPhone: true,
         area: { select: { id: true, name: true } },
       },
@@ -167,6 +216,7 @@ export const editUser = async (req, res) => {
 
     res.json({ success: true, data: user });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

@@ -1,4 +1,5 @@
-import prisma from "./prisma.js";
+import prisma from '#config/prisma';
+
 
 export const createArea = async (req, res) => {
   try {

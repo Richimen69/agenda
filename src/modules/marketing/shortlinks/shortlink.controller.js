@@ -1,4 +1,4 @@
-import prisma from './prisma.js';
+import prisma from '#config/prisma';
 import crypto from 'crypto';
 
 // Helper para generar códigos aleatorios (Base62)
