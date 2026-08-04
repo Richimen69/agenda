@@ -35,7 +35,7 @@ const SUCURSAL = [
 ];
 
 const DEPARTMENT_OPTIONS = [
-  { value: "CITAS DE SERVICIO", label: "Citas de Servicio" },
+  { value: "SERVICIO", label: "Citas de Servicio" },
   { value: "NUEVOS", label: "Nuevos" },
   { value: "OPERADOR", label: "Operador" },
   { value: "REFACCIONES", label: "Refacciones" },

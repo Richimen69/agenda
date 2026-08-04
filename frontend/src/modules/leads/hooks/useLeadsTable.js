@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { deleteLead, updateLead, createLead, reactivateLead as reactivateLeadApi} from "../services/leads.api";
+import {
+  deleteLead,
+  updateLead,
+  createLead,
+  reactivateLead as reactivateLeadApi,
+} from "../services/leads.api";
 import { sanitizeForPrisma } from "../utils/importHelpers";
 import { addLeadComment as addLeadCommentApi } from "../services/leads.api";
-
 
 export function useLeadsTable(leads, onLeadsChange) {
   const [data, setData] = useState([]);
@@ -18,10 +22,18 @@ export function useLeadsTable(leads, onLeadsChange) {
     for (let i = 0; i < rows.length; i++) {
       try {
         const response = await createLead(sanitizeForPrisma(rows[i]));
-        if (!response?.success) throw new Error("Respuesta inválida");
+        if (!response?.success)
+          throw new Error(response?.error || "Respuesta inválida");
         results.success.push(response.data);
       } catch (error) {
-        results.failed.push({ row: rows[i], error: error.message });
+        // Antes: solo error.message genérico. Ahora capturamos el status real también.
+        const reason =
+          error.response?.data?.error || error.message || "Error desconocido";
+        results.failed.push({
+          row: rows[i],
+          error: reason,
+          status: error.response?.status,
+        });
       }
       setImportProgress({ done: i + 1, total: rows.length });
     }
@@ -107,42 +119,44 @@ export function useLeadsTable(leads, onLeadsChange) {
   );
 
   const reactivateLead = useCallback(async (leadId, payload) => {
-  setCreating(true);
-  try {
-    const response = await reactivateLeadApi(leadId, payload);
-    if (!response?.success) throw new Error("Error al reactivar el lead");
+    setCreating(true);
+    try {
+      const response = await reactivateLeadApi(leadId, payload);
+      if (!response?.success) throw new Error("Error al reactivar el lead");
 
-    // Actualiza el lead existente en la tabla local en vez de agregar una fila nueva
-    setData((prev) =>
-      prev.map((row) => (row.id === leadId ? { ...row, ...response.data } : row)),
-    );
-    return true;
-  } catch (error) {
-    console.error("Fallo al reactivar lead", error);
-    alert("Hubo un error al reactivar el lead. Revisa la conexión.");
-    return false;
-  } finally {
-    setCreating(false);
-  }
-}, []);
+      // Actualiza el lead existente en la tabla local en vez de agregar una fila nueva
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === leadId ? { ...row, ...response.data } : row,
+        ),
+      );
+      return true;
+    } catch (error) {
+      console.error("Fallo al reactivar lead", error);
+      alert("Hubo un error al reactivar el lead. Revisa la conexión.");
+      return false;
+    } finally {
+      setCreating(false);
+    }
+  }, []);
 
-const addComment = useCallback(async (leadId, text, author) => {
-  try {
-    const newComment = await addLeadCommentApi(leadId, { text, author });
-    setData((prev) =>
-      prev.map((row) =>
-        row.id === leadId
-          ? { ...row, comments: [...(row.comments || []), newComment] }
-          : row,
-      ),
-    );
-    return true;
-  } catch (error) {
-    console.error("Fallo al agregar comentario", error);
-    alert("No se pudo guardar el comentario.");
-    return false;
-  }
-}, []);
+  const addComment = useCallback(async (leadId, text, author) => {
+    try {
+      const newComment = await addLeadCommentApi(leadId, { text, author });
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === leadId
+            ? { ...row, comments: [...(row.comments || []), newComment] }
+            : row,
+        ),
+      );
+      return true;
+    } catch (error) {
+      console.error("Fallo al agregar comentario", error);
+      alert("No se pudo guardar el comentario.");
+      return false;
+    }
+  }, []);
 
   return {
     data,
@@ -154,6 +168,6 @@ const addComment = useCallback(async (leadId, text, author) => {
     reactivateLead,
     bulkImportLeads,
     importProgress,
-    addComment
+    addComment,
   };
 }

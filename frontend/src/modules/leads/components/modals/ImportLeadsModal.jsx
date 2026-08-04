@@ -11,7 +11,7 @@ import {
 } from "../../utils/importHelpers";
 import { checkDuplicatePhones } from "../../services/leads.api";
 
-const STEPS = { UPLOAD: 1, MAPPING: 2, PREVIEW: 3, DONE: 4 };
+const STEPS = { UPLOAD: 1, MAPPING: 2, PREVIEW: 3, DUPLICATES: 4, DONE: 5 };
 
 export const ImportLeadsModal = ({
   isOpen,
@@ -39,6 +39,8 @@ export const ImportLeadsModal = ({
     setDuplicates([]);
     setResult(null);
     setError("");
+    setDuplicateChecked(false); 
+    setRowsWithDuplicateInfo([]); 
   };
 
   const handleClose = () => {
@@ -117,7 +119,6 @@ export const ImportLeadsModal = ({
     setDuplicates(findDuplicatesInFile(mapped));
     setStep(STEPS.PREVIEW);
   };
-
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -268,6 +269,70 @@ export const ImportLeadsModal = ({
                 </tbody>
               </table>
             </div>
+            <div className="flex justify-between pt-2">
+              <button
+                onClick={() => setStep(STEPS.MAPPING)}
+                className="text-sm text-gray-500 hover:underline"
+              >
+                ← Volver
+              </button>
+              <button
+                onClick={async () => {
+                  await handleCheckDuplicates();
+                  setStep(STEPS.DUPLICATES); // <- ahora sí avanza al paso de duplicados
+                }}
+                disabled={!validation.valid.length}
+                className="px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b] disabled:opacity-50"
+              >
+                Continuar ({validation.valid.length} leads)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === STEPS.DUPLICATES && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Revisa antes de importar: los leads existentes se marcarán como
+              reingreso en vez de duplicarse.
+            </p>
+
+            <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-md">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="text-left px-2 py-1.5">Nombre</th>
+                    <th className="text-left px-2 py-1.5">Teléfono</th>
+                    <th className="text-left px-2 py-1.5">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rowsWithDuplicateInfo.map((row, i) => (
+                    <tr key={i} className="border-t border-gray-50">
+                      <td className="px-2 py-1.5">{row.fullName}</td>
+                      <td className="px-2 py-1.5">{row.phone}</td>
+                      <td className="px-2 py-1.5">
+                        {row.duplicateStatus === "none" && (
+                          <span className="text-green-600">Nuevo</span>
+                        )}
+                        {row.duplicateStatus === "returning" && (
+                          <span className="text-blue-600">
+                            Reingreso (hace {row.duplicateMatch.daysSince} días)
+                          </span>
+                        )}
+                        {row.duplicateStatus === "recent" && (
+                          <span className="text-orange-500">
+                            ⚠ Posible duplicado (hace{" "}
+                            {row.duplicateMatch.daysSince} días,{" "}
+                            {row.duplicateMatch.status})
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {importProgress && (
               <div className="text-sm text-gray-500">
@@ -285,17 +350,17 @@ export const ImportLeadsModal = ({
 
             <div className="flex justify-between pt-2">
               <button
-                onClick={() => setStep(STEPS.MAPPING)}
+                onClick={() => setStep(STEPS.PREVIEW)}
                 className="text-sm text-gray-500 hover:underline"
               >
                 ← Volver
               </button>
               <button
                 onClick={handleImport}
-                disabled={!validation.valid.length || !!importProgress}
+                disabled={!rowsWithDuplicateInfo.length || !!importProgress}
                 className="px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b] disabled:opacity-50"
               >
-                Importar {validation.valid.length} leads
+                Confirmar Importación ({rowsWithDuplicateInfo.length})
               </button>
             </div>
           </div>
@@ -303,65 +368,45 @@ export const ImportLeadsModal = ({
 
         {/* PASO 4: RESULTADO */}
         {step === STEPS.DONE && result && (
-          <div className="space-y-4 text-center py-6">
-            <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-            <p className="text-gray-700">
-              Se importaron <strong>{result.success.length}</strong> leads
-              correctamente.
-            </p>
-            {result.failed.length > 0 && (
-              <p className="text-sm text-red-500">
-                {result.failed.length} fallaron al guardarse en el servidor.
+          <div className="space-y-4 py-6">
+            <div className="text-center">
+              <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
+              <p className="text-gray-700 mt-2">
+                Se importaron <strong>{result.success.length}</strong> leads
+                correctamente.
               </p>
+            </div>
+
+            {result.failed.length > 0 && (
+              <div className="max-h-48 overflow-y-auto border border-red-100 bg-red-50 rounded-md p-3 text-xs space-y-1">
+                <p className="font-medium text-red-600 mb-2">
+                  {result.failed.length} fallaron:
+                </p>
+                {result.failed.slice(0, 10).map((f, i) => (
+                  <p key={i} className="text-red-500">
+                    {f.row.fullName || "Sin nombre"} ({f.row.phone}): {f.error}
+                    {f.status && ` [${f.status}]`}
+                  </p>
+                ))}
+                {result.failed.length > 10 && (
+                  <p className="text-red-400">
+                    ...y {result.failed.length - 10} más
+                  </p>
+                )}
+              </div>
             )}
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b]"
-            >
-              Cerrar
-            </button>
+
+            <div className="text-center">
+              <button
+                onClick={handleClose}
+                className="px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b]"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         )}
       </div>
-      {duplicateChecked && (
-        <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-md">
-          <table className="w-full text-xs">
-            <thead className="bg-gray-50 sticky top-0">
-              <tr>
-                <th className="text-left px-2 py-1.5">Nombre</th>
-                <th className="text-left px-2 py-1.5">Teléfono</th>
-                <th className="text-left px-2 py-1.5">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rowsWithDuplicateInfo.map((row, i) => (
-                <tr key={i} className="border-t border-gray-50">
-                  <td className="px-2 py-1.5">{row.fullName}</td>
-                  <td className="px-2 py-1.5">{row.phone}</td>
-                  <td className="px-2 py-1.5">
-                    {row.duplicateStatus === "none" && (
-                      <span className="text-green-600">Nuevo</span>
-                    )}
-                    {row.duplicateStatus === "returning" && (
-                      <span className="text-blue-600">
-                        Reingreso (último: hace {row.duplicateMatch.daysSince}{" "}
-                        días)
-                      </span>
-                    )}
-                    {row.duplicateStatus === "recent" && (
-                      <span className="text-orange-500">
-                        ⚠ Posible duplicado: mismo lead hace{" "}
-                        {row.duplicateMatch.daysSince} días (
-                        {row.duplicateMatch.status})
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 };
