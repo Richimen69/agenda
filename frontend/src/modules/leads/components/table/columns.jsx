@@ -58,13 +58,13 @@ export function buildLeadsColumns(updateData, users) {
   const asesoresOptions = (users || [])
     .filter((user) => user?.area?.name === "Asesores de ventas")
     .map((user) => ({
-      value: user.id,
+      value: user.name,
       label: user.name,
     }));
   const responsablesOptions = (users || [])
     .filter((user) => user?.moduleRoles?.includes("LEADS_RESPONSABLE"))
     .map((user) => ({
-      value: user.id,
+      value: user.name,
       label: user.name,
     }));
   return [
@@ -107,7 +107,7 @@ export function buildLeadsColumns(updateData, users) {
       header: SortableHeader("Responsable"),
       accessorKey: "agent",
       cell: (props) => (
-        <BadgeSelectCell
+                <BadgeSelectCell
           {...props}
           updateData={updateData}
           options={responsablesOptions}
