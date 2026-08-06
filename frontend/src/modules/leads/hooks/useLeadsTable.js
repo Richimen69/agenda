@@ -20,6 +20,8 @@ export function useLeadsTable(leads, onLeadsChange) {
     setImportProgress({ done: 0, total: rows.length });
 
     for (let i = 0; i < rows.length; i++) {
+      const sanitized = sanitizeForPrisma(rows[i]);
+      console.log("Enviando a createLead:", sanitized);
       try {
         const response = await createLead(sanitizeForPrisma(rows[i]));
         if (!response?.success)

@@ -377,12 +377,13 @@ model Lead {
   hasQuote       Boolean @default(false)
   amount         Float?
 
-  source      String // Ej. "CAMPAÑA PRIUS"
-  isReturning Boolean         @default(false)
-  branch      Branch          @default(GUERRERO)
-  captureView CaptureViewType @default(ALL)
+  source            String // Ej. "CAMPAÑA PRIUS"
+  lastContactSource String?
+  isReturning       Boolean         @default(false)
+  branch            Branch          @default(GUERRERO)
+  captureView       CaptureViewType @default(ALL)
   // OPTIMIZACIÓN 3: Historial de comentarios relacional
-  comments    LeadComment[]
+  comments          LeadComment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -395,14 +396,21 @@ model Lead {
 }
 
 model LeadComment {
-  id   String @id @default(uuid())
-  text String @db.Text
-
+  id     String      @id @default(uuid())
+  text   String      @db.Text
+  type   CommentType @default(USER_NOTE)
   leadId Int
-  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead   Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   author    String // Ej. "Asesor" o "Recuperación"
   createdAt DateTime @default(now())
+}
+
+enum CommentType {
+  SYSTEM_CREATED
+  SYSTEM_REACTIVATED
+  SYSTEM_STATUS_CHANGE
+  USER_NOTE
 }
 
 enum ModuleRole {

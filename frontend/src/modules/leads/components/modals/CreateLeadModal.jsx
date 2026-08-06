@@ -165,7 +165,7 @@ export const CreateLeadModal = ({
                 className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand"
               >
                 <option value="NUEVOS">Nuevos</option>
-                <option value="CITAS DE SERVICIO">Citas de Servicio</option>
+                <option value="SERVICIO">Citas de Servicio</option>
                 <option value="OPERADOR">Operador</option>
                 <option value="REFACCIONES">Refacciones</option>
                 <option value="DIGITAL">Digital</option>

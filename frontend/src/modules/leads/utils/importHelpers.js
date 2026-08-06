@@ -95,6 +95,12 @@ export const LEAD_FIELDS = [
     required: false,
     transform: normalizeBoolean,
   },
+    {
+    key: "amount",
+    label: "Monto",
+    required: false,
+    transform: normalizeFloat,
+  },
   {
     key: "isReturning",
     label: "Reingreso",

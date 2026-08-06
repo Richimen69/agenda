@@ -70,7 +70,11 @@ export function normalizeAssignment(value) {
  */
 export function normalizeFloat(value) {
   if (value === "" || value === null || value === undefined) return null;
-  const num = Number(value);
+
+  // Limpia símbolos de moneda, espacios y comas de miles: "$1,500.00" -> "1500.00"
+  const cleaned = String(value).replace(/[$,\s]/g, "");
+
+  const num = Number(cleaned);
   return isNaN(num) ? null : num;
 }
 
