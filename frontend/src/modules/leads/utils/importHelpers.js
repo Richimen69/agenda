@@ -7,6 +7,7 @@ import {
   normalizeAssignment,
   normalizeFloat,
   normalizeSource,
+  normalizeContactMethod,
 } from "./enumMappers";
 
 // Campos que tu sistema espera. Ajusta según tu modelo real.
@@ -49,7 +50,7 @@ export const LEAD_FIELDS = [
     label: "Origen",
     required: true,
     transform: normalizeSource,
-  }, // requerido en schema
+  },
   {
     key: "department",
     label: "Área",
@@ -59,6 +60,13 @@ export const LEAD_FIELDS = [
   { key: "agent", label: "Responsable", required: false },
   { key: "interest", label: "Interés", required: false },
   { key: "status", label: "Estado", required: false, enumMap: normalizeStatus },
+  {
+    key: "contactMethod",
+    label: "Medio de contacto",
+    required: false,
+    enumMap: normalizeContactMethod,
+  },
+  { key: "lostReason", label: "Motivo", required: false }, // NUEVO — mapea directo a MOTIVO
   {
     key: "firstContactTime",
     label: "Tiempo de contacto",
@@ -95,9 +103,9 @@ export const LEAD_FIELDS = [
     required: false,
     transform: normalizeBoolean,
   },
-    {
+  {
     key: "amount",
-    label: "Monto",
+    label: "Monto Generado",
     required: false,
     transform: normalizeFloat,
   },
@@ -106,6 +114,42 @@ export const LEAD_FIELDS = [
     label: "Reingreso",
     required: false,
     transform: normalizeBoolean,
+  },
+
+  // Campos especiales: no son columnas de Lead, generan un LeadComment al importar
+  {
+    key: "initialComment",
+    label: "Comentarios (CRM)",
+    required: false,
+    isComment: true,
+    buildComment: (raw) =>
+      raw?.trim() ? { text: raw.trim(), type: "USER_NOTE" } : null,
+  },
+  {
+    key: "followUpNote",
+    label: "Seguimiento",
+    required: false,
+    isComment: true,
+    buildComment: (raw) =>
+      raw?.trim()
+        ? { text: `Seguimiento: ${raw.trim()}`, type: "USER_NOTE" }
+        : null,
+  },
+  {
+    key: "ventaFlag",
+    label: "Venta (marcador)",
+    required: false,
+    isComment: true,
+    buildComment: (raw) => {
+      const v = String(raw ?? "")
+        .trim()
+        .toUpperCase();
+      if (v !== "SÍ" && v !== "SI") return null;
+      return {
+        text: "Marcado como VENTA en el archivo de origen — captura el Monto Generado manualmente para que se refleje en los KPIs.",
+        type: "USER_NOTE",
+      };
+    },
   },
 ];
 
@@ -118,11 +162,18 @@ export function applyColumnMapping(rows, mapping) {
     .map((row) => {
       const mapped = {};
       const warnings = [];
+      const comments = [];
 
       LEAD_FIELDS.forEach((field) => {
         const sourceColumn = mapping[field.key];
         if (!sourceColumn) return;
         const raw = row[sourceColumn];
+
+        if (field.isComment) {
+          const comment = field.buildComment(raw);
+          if (comment) comments.push(comment);
+          return; // no se agrega a "mapped", no es un campo de Lead
+        }
 
         if (field.enumMap) {
           const result = field.enumMap(raw);
@@ -139,9 +190,7 @@ export function applyColumnMapping(rows, mapping) {
         }
       });
 
-      // FIX: ya no metemos __warnings dentro de "mapped". Devolvemos
-      // un objeto separado: { data, warnings }. "data" es justo lo
-      // que se le puede mandar a Prisma sin filtrar nada raro.
+      mapped.comments = comments; // no está en LEAD_FIELDS.keys, sanitizeForPrisma lo filtra solo
       return { data: mapped, warnings };
     })
     .filter((entry) => !isGhostRow(entry.data));
@@ -235,7 +284,7 @@ export function normalizeBoolean(value) {
   const v = String(value ?? "")
     .trim()
     .toUpperCase();
-  return ["SI", "SÍ", "S", "TRUE", "1"].includes(v);
+  return ["SI", "SÍ", "S", "TRUE", "1", "REINGRESO"].includes(v);
 }
 
 /**

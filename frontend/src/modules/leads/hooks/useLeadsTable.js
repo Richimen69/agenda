@@ -14,25 +14,55 @@ export function useLeadsTable(leads, onLeadsChange) {
   const [creating, setCreating] = useState(false);
 
   const [importProgress, setImportProgress] = useState(null); // { done, total }
+  useEffect(() => {
+    if (leads) setData(leads);
+  }, [leads]);
+  const createInitialComments = async (leadId, comments) => {
+    for (const comment of comments || []) {
+      try {
+        await addLeadCommentApi(leadId, {
+          text: comment.text,
+          author: "Importación",
+        });
+      } catch (err) {
+        console.error(`No se pudo crear comentario para lead ${leadId}:`, err);
+        // no truena el import completo por un comentario fallido
+      }
+    }
+  };
 
   const bulkImportLeads = useCallback(async (rows) => {
-    const results = { success: [], failed: [] };
+    const results = { success: [], failed: [], reactivated: [] };
     setImportProgress({ done: 0, total: rows.length });
 
     for (let i = 0; i < rows.length; i++) {
-      const sanitized = sanitizeForPrisma(rows[i]);
-      console.log("Enviando a createLead:", sanitized);
+      const row = rows[i];
       try {
-        const response = await createLead(sanitizeForPrisma(rows[i]));
-        if (!response?.success)
-          throw new Error(response?.error || "Respuesta inválida");
-        results.success.push(response.data);
+        if (
+          row.duplicateStatus === "recent" ||
+          row.duplicateStatus === "returning"
+        ) {
+          const response = await reactivateLeadApi(row.duplicateMatch.id, {
+            newInterest: row.interest || undefined,
+            newSource: row.source || undefined,
+            note: `Reingreso vía importación: ${row.interest || "sin especificar"}`,
+          });
+          if (!response?.success)
+            throw new Error(response?.error || "Error al reactivar");
+          await createInitialComments(row.duplicateMatch.id, row.comments);
+          results.reactivated.push(response.data);
+        } else {
+          const response = await createLead(sanitizeForPrisma(row));
+          if (!response?.success)
+            throw new Error(response?.error || "Respuesta inválida");
+          await createInitialComments(response.data.id, row.comments);
+          results.success.push(response.data);
+        }
       } catch (error) {
-        // Antes: solo error.message genérico. Ahora capturamos el status real también.
         const reason =
           error.response?.data?.error || error.message || "Error desconocido";
         results.failed.push({
-          row: rows[i],
+          row,
           error: reason,
           status: error.response?.status,
         });
@@ -40,16 +70,19 @@ export function useLeadsTable(leads, onLeadsChange) {
       setImportProgress({ done: i + 1, total: rows.length });
     }
 
-    if (results.success.length) {
-      setData((prev) => [...results.success, ...prev]);
+    if (results.success.length || results.reactivated.length) {
+      setData((prev) => {
+        const updated = prev.map((lead) => {
+          const match = results.reactivated.find((r) => r.id === lead.id);
+          return match ? { ...lead, ...match } : lead;
+        });
+        return [...results.success, ...updated];
+      });
     }
+
     setImportProgress(null);
     return results;
   }, []);
-
-  useEffect(() => {
-    if (leads) setData(leads);
-  }, [leads]);
 
   const updateCell = useCallback(
     async (rowIndex, columnId, value) => {
@@ -77,6 +110,36 @@ export function useLeadsTable(leads, onLeadsChange) {
           old.map((row, i) =>
             i === rowIndex ? { ...row, [columnId]: previousValue } : row,
           ),
+        );
+        alert("Hubo un error al guardar el cambio. Se revirtió localmente.");
+      } finally {
+        setSavingRow(null);
+      }
+    },
+    [data],
+  );
+
+  const updateMultipleCells = useCallback(
+    async (rowIndex, updates) => {
+      const leadId = data[rowIndex]?.id;
+      if (!leadId) return;
+
+      const previous = { ...data[rowIndex] };
+      // Optimistic update de varios campos a la vez
+      setData((old) =>
+        old.map((row, i) => (i === rowIndex ? { ...row, ...updates } : row)),
+      );
+      setSavingRow(rowIndex);
+
+      try {
+        const response = await updateLead(leadId, updates);
+        if (!response?.success && !response?.ok) {
+          throw new Error("Respuesta inválida del servidor");
+        }
+      } catch (error) {
+        console.error("Fallo al guardar en BD", error);
+        setData((old) =>
+          old.map((row, i) => (i === rowIndex ? previous : row)),
         );
         alert("Hubo un error al guardar el cambio. Se revirtió localmente.");
       } finally {
@@ -163,6 +226,7 @@ export function useLeadsTable(leads, onLeadsChange) {
   return {
     data,
     updateCell,
+    updateMultipleCells,
     addLead,
     removeLead,
     savingRow,

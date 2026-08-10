@@ -9,51 +9,36 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
-  Trash2,
-  Download,
-  Plus,
-  Calendar,
-  Filter,
   ChevronLeft,
   ChevronRight,
+  MessageSquareText,
+  Trash2,
 } from "lucide-react";
-
-import { Upload as UploadIcon } from "lucide-react";
-
 import { useLeadsTable } from "../../hooks/useLeadsTable";
-import { buildLeadsColumns } from "./columns";
-import {
-  debounce,
-  exportLeadsToCSV,
-  globalLeadFilter,
-} from "../../utils/leadsHelpers";
-import { CreateLeadModal } from "../modals/CreateLeadModal";
-import { ImportLeadsModal } from "../modals/ImportLeadsModal";
+import { buildAuxColumns } from "./auxColumns";
 import { LeadTimelineModal } from "../modals/LeadTimelineModal";
-import { MessageSquareText } from "lucide-react";
+import { debounce, globalLeadFilter } from "../../utils/leadsHelpers";
 
-export const AllTable = ({ leads, onLeadsChange, user, users }) => {
-  const {
-    data,
-    updateCell,
-    updateMultipleCells,
-    addLead,
-    removeLead,
-    reactivateLead,
-    bulkImportLeads,
-    importProgress,
-    addComment,
-    creating,
-  } = useLeadsTable(leads, onLeadsChange);
-  const [timelineLeadId, setTimelineLeadId] = useState(null);
-  const timelineLead = data.find((l) => l.id === timelineLeadId) || null;
+export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
+  const { data, updateCell, updateMultipleCells, addComment, removeLead } =
+    useLeadsTable(leads, onLeadsChange);
+
+  const agents = useMemo(() => {
+    return (users || []).filter(
+      (user) =>
+        user?.moduleRoles?.includes("LEADS_RESPONSABLE") ||
+        user?.moduleRoles?.includes("LEADS_ADMIN"),
+    );
+  }, [users]);
+
   const [globalFilter, setGlobalFilter] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [timelineLeadId, setTimelineLeadId] = useState(null);
+
   const debouncedSetFilter = useMemo(() => debounce(setGlobalFilter, 250), []);
-  const [importModalOpen, setImportModalOpen] = useState(false);
+
   const columns = useMemo(
     () => [
-      ...buildLeadsColumns(updateCell, users, updateMultipleCells),
+      ...buildAuxColumns(updateCell, agents, users, updateMultipleCells),
       {
         id: "timeline",
         header: () => <span></span>,
@@ -81,7 +66,7 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
         ),
       },
     ],
-    [updateCell, removeLead, updateMultipleCells],
+    [updateCell, agents, removeLead, updateMultipleCells], // Importante agregar removeLead aquí
   );
 
   const table = useReactTable({
@@ -96,11 +81,8 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 25 } },
   });
-  const handleCreate = async (formData) => {
-    const ok = await addLead(formData);
-    if (ok) setModalOpen(false);
-  };
 
+  const timelineLead = data.find((l) => l.id === timelineLeadId) || null;
   const filteredCount = table.getFilteredRowModel().rows.length;
 
   return (
@@ -108,32 +90,8 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
       {/* HEADER SUPERIOR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 m-0 tracking-tight">
-          Leads Registrados
+          Leads CRM
         </h2>
-        <div className="flex gap-3 mt-4 sm:mt-0">
-          <button
-            className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
-            onClick={() => exportLeadsToCSV(data, `leads_${Date.now()}.csv`)}
-          >
-            <Download className="w-4 h-4" />
-            Exportar Datos
-          </button>
-          <button
-            className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
-            onClick={() => setImportModalOpen(true)}
-          >
-            <UploadIcon className="w-4 h-4" />
-            Importar
-          </button>
-          <button
-            disabled={creating}
-            className="flex items-center gap-2 px-5 py-2 bg-brand text-white rounded-full text-sm font-medium hover:bg-[#e8543b] transition-colors shadow-sm disabled:opacity-50"
-            onClick={() => setModalOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-            {creating ? "Creando..." : "Nuevo Lead"}
-          </button>
-        </div>
       </div>
 
       {/* CONTENEDOR PRINCIPAL */}
@@ -144,7 +102,7 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
             <Search className="w-4 h-4" />
             <input
               type="text"
-              placeholder="Buscar por nombre, teléfono, origen o responsable..."
+              placeholder="Buscar por cliente, teléfono, interés u origen..."
               onChange={(e) => debouncedSetFilter(e.target.value)}
               className="text-sm outline-none w-full lg:w-96 text-gray-700 bg-transparent placeholder-gray-400"
             />
@@ -155,9 +113,9 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
         <div className="overflow-x-auto">
           <table className="min-w-max w-full text-left whitespace-nowrap">
             <thead className="bg-white border-b border-gray-100">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  {hg.headers.map((header) => (
                     <th
                       key={header.id}
                       className="px-4 py-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
@@ -216,7 +174,7 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+              className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -227,7 +185,7 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+              className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -253,25 +211,13 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
           </div>
         </div>
       </div>
-      <CreateLeadModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreate={addLead}
-        onReactivate={reactivateLead}
-        creating={creating}
-      />
-      <ImportLeadsModal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onImport={bulkImportLeads}
-        importProgress={importProgress}
-      />
+
       <LeadTimelineModal
         lead={timelineLead}
-        user={user}
         isOpen={!!timelineLeadId}
         onClose={() => setTimelineLeadId(null)}
         onAddComment={addComment}
+        user={user}
       />
     </div>
   );

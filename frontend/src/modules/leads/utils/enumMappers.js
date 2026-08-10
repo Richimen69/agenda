@@ -11,6 +11,15 @@ const DEPARTMENT_MAP = {
   "DIGITAL": "DIGITAL",
 };
 
+const CONTACT_METHOD_MAP = {
+  "WHATSAPP": "WHATSAPP",
+  "LLAMADA": "LLAMADA",
+  "FACEBOOK MESSENGER": "FACEBOOK_MESSENGER",
+  "MESSENGER": "FACEBOOK_MESSENGER",
+  "INSTAGRAM": "INSTAGRAM",
+  "FORMULARIO WEB": "FORMULARIO_WEB",
+};
+
 // --- BRANCH ---
 const BRANCH_MAP = {
   "GUERRERO": "GUERRERO",
@@ -85,4 +94,12 @@ export function normalizeFloat(value) {
 export function normalizeSource(value) {
   const v = String(value ?? "").trim();
   return v === "" ? "SIN ORIGEN" : v;
+}
+
+export function normalizeContactMethod(value) {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (CONTACT_METHOD_MAP[key]) {
+    return { value: CONTACT_METHOD_MAP[key], wasUnmapped: false, original: value };
+  }
+  return { value: "WHATSAPP", wasUnmapped: true, original: value };
 }

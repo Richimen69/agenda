@@ -26,6 +26,7 @@ export const LeadsDashboard = () => {
   const [nuevosFunnel, setNuevosFunnel] = useState(null);
   const [seminuevosFunnel, setSeminuevosFunnel] = useState(null);
   const [servicioFunnel, setServicioFunnel] = useState(null);
+  const [refaccionesFunnel, setRefaccionesFunnel] = useState(null);
   const [leadCount, setLeadCount] = useState(null);
 
   const [month, setMonth] = useState(getCurrentMonth());
@@ -40,11 +41,13 @@ export const LeadsDashboard = () => {
     Promise.all([
       getCampaignResults(month),
       getRecoveryFunnel(month),
-      getDigitalFunnel(month, ["NUEVOS", "DIGITAL"]),
+      getDigitalFunnel(month, "NUEVOS"),
       getDigitalFunnel(month, "SEMINUEVOS"),
       getDigitalFunnel(month, "SERVICIO"),
       getAmount(month, ["SERVICIO"]),
       getLeadCount(month),
+      getDigitalFunnel(month, "REFACCIONES"),
+      getDigitalFunnel(month, "DIGITAL"),
     ])
       .then(
         ([
@@ -55,6 +58,8 @@ export const LeadsDashboard = () => {
           servicioRes,
           amountRes,
           leadCountRes,
+          refaccionesRes,
+          digitalRes,
         ]) => {
           setCampaigns(campaignRes.data);
           setFunnel(funnelRes.data);
@@ -63,6 +68,8 @@ export const LeadsDashboard = () => {
           setServicioFunnel(servicioRes.data);
           setGeneratedAmount(amountRes.data);
           setLeadCount(leadCountRes.data);
+          setRefaccionesFunnel(refaccionesRes.data);
+          setDigitalFunnel(digitalRes.data);
         },
       )
       .catch((err) => console.error("Error cargando dashboard:", err))
@@ -146,6 +153,8 @@ export const LeadsDashboard = () => {
             <DigitalFunnel data={nuevosFunnel} title="Autos Nuevos" />
             <DigitalFunnel data={seminuevosFunnel} title="Seminuevos" />
             <DigitalFunnel data={servicioFunnel} title="Servicio" />
+            <DigitalFunnel data={refaccionesFunnel} title="Refacciones" />
+            <DigitalFunnel data={digitalFunnel} title="Digital" />
           </div>
         </div>
       )}

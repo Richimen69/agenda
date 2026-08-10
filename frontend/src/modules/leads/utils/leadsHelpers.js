@@ -96,3 +96,9 @@ export const BADGE_COLOR_MAP = {
 export function getBadgeColor(value) {
   return BADGE_COLOR_MAP[value] || "bg-gray-100 text-gray-600";
 }
+
+export const VENTA_AUTO_LOCK_DEPARTMENTS = [
+  "SERVICIO",
+  "REFACCIONES",
+  "DIGITAL",
+];

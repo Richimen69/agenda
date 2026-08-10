@@ -5,8 +5,13 @@ import {
   EditableSelectCell,
   BadgeSelectCell,
   CheckboxCell,
+  VentaCell,
 } from "./cells/EditableCells";
-import { formatDate, formatCurrency } from "../../utils/leadsHelpers";
+import {
+  formatDate,
+  formatCurrency,
+  VENTA_AUTO_LOCK_DEPARTMENTS,
+} from "../../utils/leadsHelpers";
 
 const SortableHeader =
   (label) =>
@@ -48,13 +53,19 @@ const PHASE_OPTIONS = [
   { value: "R2_CONTACTADO", label: "R2" },
 ];
 
-const checkboxColumn = (accessorKey, label, updateData) => ({
+const checkboxColumn = (accessorKey, label, updateData, getDisabled) => ({
   header: SortableHeader(label),
   accessorKey,
-  cell: (props) => <CheckboxCell {...props} updateData={updateData} />,
+  cell: (props) => (
+    <CheckboxCell
+      {...props}
+      updateData={updateData}
+      disabled={getDisabled ? getDisabled(props.row.original) : false}
+    />
+  ),
 });
 
-export function buildLeadsColumns(updateData, users) {
+export function buildLeadsColumns(updateData, users, updateMultiple) {
   const asesoresOptions = (users || [])
     .filter((user) => user?.area?.name === "Asesores de ventas")
     .map((user) => ({
@@ -67,6 +78,10 @@ export function buildLeadsColumns(updateData, users) {
       value: user.name,
       label: user.name,
     }));
+  const isVentaLocked = (lead) =>
+    VENTA_AUTO_LOCK_DEPARTMENTS.includes(lead.department) &&
+    !!lead.amount &&
+    lead.amount > 0;
   return [
     {
       header: SortableHeader("Fecha"),
@@ -107,7 +122,7 @@ export function buildLeadsColumns(updateData, users) {
       header: SortableHeader("Responsable"),
       accessorKey: "agent",
       cell: (props) => (
-                <BadgeSelectCell
+        <BadgeSelectCell
           {...props}
           updateData={updateData}
           options={responsablesOptions}
@@ -162,31 +177,24 @@ export function buildLeadsColumns(updateData, users) {
       ),
     },
     checkboxColumn("isReturning", "Reingreso", updateData),
-    checkboxColumn("hasAppointment", "Cita", updateData),
-    checkboxColumn("showedUp", "Show", updateData),
+    checkboxColumn("hasAppointment", "Cita", updateData, isVentaLocked),
+    checkboxColumn("showedUp", "Show", updateData, isVentaLocked),
     checkboxColumn("hasQuote", "Cotiz.", updateData),
     {
       header: SortableHeader("Monto Generado"),
       accessorKey: "amount",
-      cell: (props) => {
-        const isCitaServicio = props.row.original.department === "SERVICIO";
-        if (!isCitaServicio) {
-          return (
-            <div className="text-gray-300 text-center text-sm py-1.5">-</div>
-          );
-        }
-        return (
-          <div className="flex items-center w-24">
-            <span className="text-gray-500 mr-1">$</span>
-            <EditableTextCell
-              {...props}
-              updateData={updateData}
-              type="number"
-              placeholder="0.00"
-            />
-          </div>
-        );
-      },
+      cell: (props) => (
+        <div className="flex items-center w-24">
+          <span className="text-gray-500 mr-1">$</span>
+          <VentaCell
+            {...props}
+            updateData={updateData}
+            type="number"
+            placeholder="0.00"
+            updateMultiple={updateMultiple}
+          />
+        </div>
+      ),
     },
     {
       header: SortableHeader("Sucursal"),

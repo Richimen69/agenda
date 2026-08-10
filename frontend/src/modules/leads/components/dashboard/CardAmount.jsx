@@ -1,5 +1,4 @@
 export const CardAmount = ({ title, amount, loading, type }) => {
-  console.log("CardAmount amount:", amount);
   return (
     <div className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm sm:p-7">
       <h3 className="text-sm font-medium text-gray-500">{title}</h3>

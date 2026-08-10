@@ -439,6 +439,7 @@ enum ContactMethod {
   LLAMADA
   FACEBOOK_MESSENGER
   INSTAGRAM
+  FORMULARIO_WEB
 }
 
 enum LeadStatus {

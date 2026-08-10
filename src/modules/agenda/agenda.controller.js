@@ -1,5 +1,4 @@
-import prisma from '#config/prisma';
-
+import prisma from "#config/prisma";
 
 export const createEvent = async (req, res) => {
   try {
@@ -16,7 +15,7 @@ export const createEvent = async (req, res) => {
     const eventDate = new Date(scheduledAt);
 
     // 2. Calculamos cuándo enviar el WhatsApp (Ej: 1 hora antes del evento)
-    const reminderDate = new Date(eventDate.getTime() - 60 * 60 * 1000);
+    const reminderDate = new Date(eventDate.getTime() - 30 * 60 * 1000);
 
     // 3. Creamos el evento y conectamos a los invitados usando Prisma
     const newEvent = await prisma.event.create({
@@ -34,20 +33,28 @@ export const createEvent = async (req, res) => {
       // Le pedimos a Prisma que nos devuelva los datos de los invitados para sacar sus nombres
       include: {
         attendees: true,
+        creator: true,
       },
     });
 
     // 4. Generamos la cola de recordatorios (Uno para cada invitado)
-    const formattedDate = eventDate.toLocaleString("es-MX", {
+    const formattedTime = eventDate.toLocaleString("es-MX", {
       timeZone: "America/Mexico_City",
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
+    // Extraemos solo la hora en formato de 24h para hacer la validación
+    const hourString = new Intl.DateTimeFormat("es-MX", {
+      timeZone: "America/Mexico_City",
+      hour: "numeric",
+      hour12: false,
+    }).format(eventDate);
+
+    const hour = parseInt(hourString, 10);
+
+    // Si es la 1 de la mañana (1) o la 1 de la tarde (13), usamos "a la"
+    const preposition = hour === 1 || hour === 13 ? "a la" : "a las";
 
     // 5. Generamos la cola de recordatorios
     const remindersData = newEvent.attendees.map((attendee) => ({
@@ -55,7 +62,7 @@ export const createEvent = async (req, res) => {
       eventId: newEvent.id,
       ticketId: ticketId || null,
       scheduledAt: reminderDate,
-      messagePayload: `Hola ${attendee.name}, recordatorio: Tienes el evento "${title}" programado para el ${formattedDate}.`,
+      messagePayload: `Hola ${attendee.name}, recordatorio: Tienes el evento "${title}" programado para hoy ${preposition} ${formattedTime}, asignado por ${newEvent.creator.name}.`,
     }));
 
     // Insertamos todos los recordatorios de golpe en la BD

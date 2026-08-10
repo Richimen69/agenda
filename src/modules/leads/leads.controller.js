@@ -1,6 +1,6 @@
 import prisma from "#config/prisma";
 import { sanitizeLeadInput } from "./utils/leadSanitizer.js";
-
+export const VENTA_AUTO_LOCK_DEPARTMENTS = ["SERVICIO", "REFACCIONES", "DIGITAL"];
 export const createLead = async (req, res) => {
   try {
     const data = sanitizeLeadInput(req.body);
@@ -248,7 +248,9 @@ export const reactivateLead = async (req, res) => {
     res.json({ success: true, data: leadWithComments });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: "Error al reactivar el lead" });
+    res
+      .status(500)
+      .json({ success: false, error: "Error al reactivar el lead" });
   }
 };
 
@@ -278,7 +280,12 @@ export const getCampaignResults = async (req, res) => {
     res.json({ success: true, data, totalLeads });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: "Error al obtener resultados por campaña" });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Error al obtener resultados por campaña",
+      });
   }
 };
 
@@ -290,15 +297,43 @@ export const getRecoveryFunnel = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + 1);
 
-    const [conversaciones, enSeguimiento, noContactables, recuperados, traidosDeVuelta, totalLeads] =
-      await Promise.all([
-        prisma.leadComment.count({ where: { createdAt: { gte: startDate, lt: endDate } } }),
-        prisma.lead.count({ where: { recoveryStatus: "EN_SEGUIMIENTO", updatedAt: { gte: startDate, lt: endDate } } }),
-        prisma.lead.count({ where: { recoveryStatus: "NO_CONTACTABLE", updatedAt: { gte: startDate, lt: endDate } } }),
-        prisma.lead.count({ where: { recoveryStatus: "RECUPERADO_Y_ASIGNADO", updatedAt: { gte: startDate, lt: endDate } } }),
-        prisma.leadComment.count({ where: { type: "SYSTEM_REACTIVATED", createdAt: { gte: startDate, lt: endDate } } }),
-        prisma.lead.count({ where: { date: { gte: startDate, lt: endDate } } }),
-      ]);
+    const [
+      conversaciones,
+      enSeguimiento,
+      noContactables,
+      recuperados,
+      traidosDeVuelta,
+      totalLeads,
+    ] = await Promise.all([
+      prisma.leadComment.count({
+        where: { createdAt: { gte: startDate, lt: endDate } },
+      }),
+      prisma.lead.count({
+        where: {
+          recoveryStatus: "EN_SEGUIMIENTO",
+          updatedAt: { gte: startDate, lt: endDate },
+        },
+      }),
+      prisma.lead.count({
+        where: {
+          recoveryStatus: "NO_CONTACTABLE",
+          updatedAt: { gte: startDate, lt: endDate },
+        },
+      }),
+      prisma.lead.count({
+        where: {
+          recoveryStatus: "RECUPERADO_Y_ASIGNADO",
+          updatedAt: { gte: startDate, lt: endDate },
+        },
+      }),
+      prisma.leadComment.count({
+        where: {
+          type: "SYSTEM_REACTIVATED",
+          createdAt: { gte: startDate, lt: endDate },
+        },
+      }),
+      prisma.lead.count({ where: { date: { gte: startDate, lt: endDate } } }),
+    ]);
 
     res.json({
       success: true,
@@ -308,17 +343,30 @@ export const getRecoveryFunnel = async (req, res) => {
         noContactables,
         recuperados,
         traidosDeVuelta,
-        conversionRate: conversaciones > 0 ? +((enSeguimiento / conversaciones) * 100).toFixed(1) : 0,
+        conversionRate:
+          conversaciones > 0
+            ? +((enSeguimiento / conversaciones) * 100).toFixed(1)
+            : 0,
         recuperacionRate:
           enSeguimiento + noContactables > 0
-            ? +((recuperados / (enSeguimiento + noContactables)) * 100).toFixed(1)
+            ? +((recuperados / (enSeguimiento + noContactables)) * 100).toFixed(
+                1,
+              )
             : 0,
-        efectividadRate: totalLeads > 0 ? +((traidosDeVuelta / totalLeads) * 100).toFixed(1) : 0,
+        efectividadRate:
+          totalLeads > 0
+            ? +((traidosDeVuelta / totalLeads) * 100).toFixed(1)
+            : 0,
       },
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: "Error al obtener funnel de recuperación" });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Error al obtener funnel de recuperación",
+      });
   }
 };
 
@@ -326,7 +374,9 @@ export const getDigitalFunnel = async (req, res) => {
   const { month, department } = req.query;
 
   if (!department) {
-    return res.status(400).json({ success: false, error: "Se requiere el parámetro department" });
+    return res
+      .status(400)
+      .json({ success: false, error: "Se requiere el parámetro department" });
   }
 
   try {
@@ -334,24 +384,25 @@ export const getDigitalFunnel = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + 1);
 
-    const departmentList = department.split(","); 
+    const departmentList = department.split(",");
 
     const baseWhere = {
-      department: { in: departmentList }, 
+      department: { in: departmentList },
       date: { gte: startDate, lt: endDate },
     };
 
-    // Agregamos la consulta de ventas (quinto elemento del arreglo)
     const [leads, contactados, citas, shows, ventas] = await Promise.all([
       prisma.lead.count({ where: baseWhere }),
       prisma.lead.count({ where: { ...baseWhere, status: { not: "NUEVO" } } }),
       prisma.lead.count({ where: { ...baseWhere, hasAppointment: true } }),
       prisma.lead.count({ where: { ...baseWhere, showedUp: true } }),
-      // Contamos como venta si tiene un monto mayor a 0
-      prisma.lead.count({ where: { ...baseWhere, amount: { gt: 0 } } }), 
+      prisma.lead.count({
+        where: { ...baseWhere, amount: { not: null, gt: 0 } },
+      }), 
     ]);
 
-    const calcPercent = (value) => (leads > 0 ? +((value / leads) * 100).toFixed(0) : 0);
+    const calcPercent = (value) =>
+      leads > 0 ? +((value / leads) * 100).toFixed(0) : 0;
 
     res.json({
       success: true,
@@ -370,6 +421,8 @@ export const getDigitalFunnel = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: "Error al obtener funnel digital" });
+    res
+      .status(500)
+      .json({ success: false, error: "Error al obtener funnel digital" });
   }
 };
