@@ -25,7 +25,6 @@ const SortableHeader =
 
 const CONTACT_METHOD_OPTIONS = [
   { value: "WHATSAPP", label: "WhatsApp" },
-  { value: "LLAMADA", label: "Llamada" },
   { value: "FACEBOOK_MESSENGER", label: "Messenger" },
   { value: "INSTAGRAM", label: "Instagram" },
   { value: "FORMULARIO_WEB", label: "Formulario Web" },
@@ -34,16 +33,11 @@ const CONTACT_METHOD_OPTIONS = [
 const BRANCH_OPTIONS = [
   { value: "GUERRERO", label: "GUERRERO" },
   { value: "CHILPANCINGO", label: "CHILPANCINGO" },
-  { value: "DIGITAL", label: "DIGITAL" },
 ];
 
 const DEPARTMENT_OPTIONS = [
   { value: "NUEVOS", label: "Nuevos" },
   { value: "SEMINUEVOS", label: "Seminuevos" },
-  { value: "SERVICIO", label: "Servicio" },
-  { value: "OPERADOR", label: "Operador" },
-  { value: "REFACCIONES", label: "Refacciones" },
-  { value: "DIGITAL", label: "Digital" },
 ];
 
 const PHASE_OPTIONS = [
@@ -111,7 +105,7 @@ export function buildAuxColumns(updateData, onOpenTimeline, users, updateMultipl
     },
     {
       header: SortableHeader("Asesor"),
-      accessorKey: "agent",
+      accessorKey: "assignment",
       cell: (props) => (
         <BadgeSelectCell
           {...props}

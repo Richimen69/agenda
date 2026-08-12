@@ -1,6 +1,10 @@
 import prisma from "#config/prisma";
 import { sanitizeLeadInput } from "./utils/leadSanitizer.js";
-export const VENTA_AUTO_LOCK_DEPARTMENTS = ["SERVICIO", "REFACCIONES", "DIGITAL"];
+export const VENTA_AUTO_LOCK_DEPARTMENTS = [
+  "SERVICIO",
+  "REFACCIONES",
+  "DIGITAL",
+];
 export const createLead = async (req, res) => {
   try {
     const data = sanitizeLeadInput(req.body);
@@ -64,6 +68,16 @@ export const updateLead = async (req, res) => {
           },
         });
       }
+      if (data.isReturning === true && existingLead.isReturning === false) {
+        await tx.leadComment.create({
+          data: {
+            leadId,
+            text: "Marcado manualmente como reingreso",
+            author: "Sistema",
+            type: "SYSTEM_REACTIVATED",
+          },
+        });
+      }
 
       return lead;
     });
@@ -79,17 +93,29 @@ export const updateLead = async (req, res) => {
     res.status(500).json({ error: "Error al actualizar el lead" });
   }
 };
-// 1. Obtener todos los leads (Para la tabla principal del equipo de leads)
 export const getLeads = async (req, res) => {
   try {
+    const moduleRoles = req.user?.moduleRoles || [];
+
+    let whereCondition = {};
+
+    // Evaluamos jerarquía usando .includes()
+    if (moduleRoles.includes("LEADS_ADMIN")) {
+      whereCondition = {};
+    } else if (moduleRoles.includes("LEADS_AUX")) {
+      whereCondition = {
+        department: {
+          in: ["NUEVOS", "SEMINUEVOS"],
+        },
+      };
+    }
+
     const leads = await prisma.lead.findMany({
-      // Excluimos los que están en recuperación profunda si quieres limpiar la vista principal
-      // o simplemente traemos todos, ordenados por fecha de creación descendente
+      where: whereCondition,
       orderBy: { createdAt: "desc" },
-      include: {
-        comments: true, // Traemos el historial de notas asociado a cada lead
-      },
+      include: { comments: true },
     });
+
     res.json(leads);
   } catch (error) {
     console.error(error);
@@ -280,12 +306,10 @@ export const getCampaignResults = async (req, res) => {
     res.json({ success: true, data, totalLeads });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Error al obtener resultados por campaña",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Error al obtener resultados por campaña",
+    });
   }
 };
 
@@ -361,12 +385,10 @@ export const getRecoveryFunnel = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Error al obtener funnel de recuperación",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Error al obtener funnel de recuperación",
+    });
   }
 };
 
@@ -398,7 +420,7 @@ export const getDigitalFunnel = async (req, res) => {
       prisma.lead.count({ where: { ...baseWhere, showedUp: true } }),
       prisma.lead.count({
         where: { ...baseWhere, amount: { not: null, gt: 0 } },
-      }), 
+      }),
     ]);
 
     const calcPercent = (value) =>

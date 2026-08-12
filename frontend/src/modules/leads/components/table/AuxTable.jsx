@@ -13,15 +13,25 @@ import {
   ChevronRight,
   MessageSquareText,
   Trash2,
+  Plus,
 } from "lucide-react";
 import { useLeadsTable } from "../../hooks/useLeadsTable";
 import { buildAuxColumns } from "./auxColumns";
 import { LeadTimelineModal } from "../modals/LeadTimelineModal";
 import { debounce, globalLeadFilter } from "../../utils/leadsHelpers";
+import { CreateLeadModal } from "../modals/CreateLeadModal";
 
 export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
-  const { data, updateCell, updateMultipleCells, addComment, removeLead } =
-    useLeadsTable(leads, onLeadsChange);
+  const {
+    data,
+    updateCell,
+    updateMultipleCells,
+    addComment,
+    removeLead,
+    addLead,
+    reactivateLead,
+    creating,
+  } = useLeadsTable(leads, onLeadsChange);
 
   const agents = useMemo(() => {
     return (users || []).filter(
@@ -33,7 +43,7 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [timelineLeadId, setTimelineLeadId] = useState(null);
-
+  const [modalOpen, setModalOpen] = useState(false);
   const debouncedSetFilter = useMemo(() => debounce(setGlobalFilter, 250), []);
 
   const columns = useMemo(
@@ -66,7 +76,7 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
         ),
       },
     ],
-    [updateCell, agents, removeLead, updateMultipleCells], // Importante agregar removeLead aquí
+    [updateCell, agents, removeLead, updateMultipleCells],
   );
 
   const table = useReactTable({
@@ -86,12 +96,20 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
   const filteredCount = table.getFilteredRowModel().rows.length;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb] p-4 lg:p-8 font-sans">
+    <div className="min-h-screen p-4 lg:p-8 font-sans">
       {/* HEADER SUPERIOR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 m-0 tracking-tight">
           Leads CRM
         </h2>
+        <button
+          disabled={creating}
+          className="mt-4 sm:mt-0 flex items-center gap-2 px-5 py-2 bg-brand text-white rounded-full text-sm font-medium hover:bg-[#e8543b] transition-colors shadow-sm disabled:opacity-50"
+          onClick={() => setModalOpen(true)}
+        >
+          <Plus className="w-4 h-4" />
+          {creating ? "Creando..." : "Nuevo Lead"}
+        </button>
       </div>
 
       {/* CONTENEDOR PRINCIPAL */}
@@ -218,6 +236,13 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
         onClose={() => setTimelineLeadId(null)}
         onAddComment={addComment}
         user={user}
+      />
+      <CreateLeadModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreate={addLead}
+        onReactivate={reactivateLead}
+        creating={creating}
       />
     </div>
   );

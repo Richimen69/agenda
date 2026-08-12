@@ -72,8 +72,8 @@ export const CreateLeadModal = ({
         newSource: form.source || undefined,
         note: `Reingreso: ${form.interest || "nuevo interés"} vía ${form.source || "sin especificar"}`,
       });
-      if (ok) reset();
       onClose();
+      if (ok) reset();
       return;
     }
 

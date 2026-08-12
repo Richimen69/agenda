@@ -1,5 +1,5 @@
 export const EstadoBadge = ({ row }) => {
-  const asignado = !!row.original.agent;
+  const asignado = !!row.original.assignment;
   return (
     <span
       className={`inline-flex text-[11px] font-medium px-2 py-1 rounded-md ${

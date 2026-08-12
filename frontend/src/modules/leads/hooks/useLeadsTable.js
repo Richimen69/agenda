@@ -97,7 +97,6 @@ export function useLeadsTable(leads, onLeadsChange) {
         ),
       );
       setSavingRow(rowIndex);
-
       try {
         const response = await updateLead(leadId, { [columnId]: value });
         if (!response?.success && !response?.ok) {

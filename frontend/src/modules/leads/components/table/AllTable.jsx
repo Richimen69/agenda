@@ -104,7 +104,7 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
   const filteredCount = table.getFilteredRowModel().rows.length;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb] p-4 lg:p-8 font-sans">
+    <div className="min-h-screen p-4 lg:p-8 font-sans">
       {/* HEADER SUPERIOR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 m-0 tracking-tight">
