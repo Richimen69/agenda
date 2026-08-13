@@ -1,4 +1,4 @@
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, RefreshCcw } from "lucide-react";
 import {
   EditableTextCell,
   BadgeSelectCell,
@@ -38,11 +38,13 @@ const BRANCH_OPTIONS = [
 const DEPARTMENT_OPTIONS = [
   { value: "NUEVOS", label: "Nuevos" },
   { value: "SEMINUEVOS", label: "Seminuevos" },
+  { value: "DIGITAL", label: "Digital" },
 ];
 
 const PHASE_OPTIONS = [
   { value: "R1_POR_CONTACTAR", label: "R1" },
   { value: "R2_CONTACTADO", label: "R2" },
+  { value: "R2_ASIGNADO", label: "R3" },
 ];
 
 const checkboxColumn = (accessorKey, label, updateData, getDisabled) => ({
@@ -57,7 +59,12 @@ const checkboxColumn = (accessorKey, label, updateData, getDisabled) => ({
   ),
 });
 
-export function buildAuxColumns(updateData, onOpenTimeline, users, updateMultiple) {
+export function buildAuxColumns(
+  updateData,
+  onOpenTimeline,
+  users,
+  updateMultiple,
+) {
   const asesoresOptions = (users || [])
     .filter((user) => user?.area?.name === "Asesores de ventas")
     .map((user) => ({ value: user.name, label: user.name }));
@@ -126,20 +133,18 @@ export function buildAuxColumns(updateData, onOpenTimeline, users, updateMultipl
       ),
     },
     {
-      header: SortableHeader("Seguimiento"),
-      accessorKey: "recoveryStatus",
-      cell: (props) => (
-        <RecoveryStatusCell {...props} updateData={updateData} />
-      ),
-    },
-    {
       header: SortableHeader("Origen"),
       accessorKey: "source",
+
       cell: (props) => <EditableTextCell {...props} updateData={updateData} />,
     },
     {
       header: SortableHeader("Área"),
       accessorKey: "department",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+        return filterValues.includes(row.getValue(columnId));
+      },
       cell: (props) => (
         <BadgeSelectCell
           {...props}
@@ -151,20 +156,74 @@ export function buildAuxColumns(updateData, onOpenTimeline, users, updateMultipl
     {
       header: () => <span>Estado</span>,
       id: "estadoDerivado",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+        return filterValues.includes(row.getValue(columnId));
+      },
       cell: (props) => <EstadoBadge {...props} />,
     },
-    checkboxColumn("isReturning", "Reingreso", updateData),
+    {
+      accessorKey: "isReturning",
+      header: "Reingreso",
+      filterFn: (row, columnId, filterValues) => {
+        return filterValues.includes(row.getValue(columnId));
+      },
+      cell: ({ row }) => {
+        const isReturning = row.getValue("isReturning");
+        if (!isReturning) return null;
+        return (
+          <span className="flex items-center gap-1.5 text-brand px-2.5 py-1 rounded-md text-xs font-semibold w-max">
+            <RefreshCcw className="w-3.5 h-3.5" />
+            Reingreso
+          </span>
+        );
+      },
+    },
     checkboxColumn("hasAppointment", "Cita", updateData, isVentaLocked),
     checkboxColumn("showedUp", "Show", updateData, isVentaLocked),
     {
       header: SortableHeader("Fase"),
       accessorKey: "contactState",
-      cell: (props) => <EditableSelectCell {...props} updateData={updateData} options={PHASE_OPTIONS} />,
+      filterFn: (row, columnId, filterValues) => {
+        return filterValues.includes(row.getValue(columnId));
+      },
+      cell: (props) => (
+        <EditableSelectCell
+          {...props}
+          updateData={updateData}
+          options={PHASE_OPTIONS}
+        />
+      ),
     },
     {
-      header: SortableHeader("Venta"),
+      header: SortableHeader("Monto Generado"),
       accessorKey: "amount",
-      cell: (props) => <VentaCell {...props} updateData={updateData} updateMultiple={updateMultiple} />,
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+
+        const amount = row.getValue(columnId);
+        const hasAmount = amount != null && amount > 0;
+
+        // Evaluamos según lo que haya seleccionado el usuario en el menú
+        const matchesConVenta =
+          filterValues.includes("has_amount") && hasAmount;
+        const matchesSinVenta =
+          filterValues.includes("no_amount") && !hasAmount;
+
+        return matchesConVenta || matchesSinVenta;
+      },
+      cell: (props) => (
+        <div className="flex items-center w-24">
+          <span className="text-gray-500 mr-1">$</span>
+          <VentaCell
+            {...props}
+            updateData={updateData}
+            type="number"
+            placeholder="0.00"
+            updateMultiple={updateMultiple}
+          />
+        </div>
+      ),
     },
   ];
 }

@@ -36,7 +36,9 @@ export default function App() {
     handleStatusChange,
     handleAddComment,
     myProjects,
-    leads
+    leads,
+    leadsMonth,
+    fetchLeadsByMonth,
   } = useAppData(authUser);
 
   useEffect(() => {
@@ -182,6 +184,8 @@ export default function App() {
                   leads={leads}
                   users={users}
                   onLeadsChange={fetchData}
+                  leadsMonth={leadsMonth}
+                  fetchLeadsByMonth={fetchLeadsByMonth}
                 />
               }
             />

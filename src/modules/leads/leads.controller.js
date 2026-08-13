@@ -95,19 +95,43 @@ export const updateLead = async (req, res) => {
 };
 export const getLeads = async (req, res) => {
   try {
+    const { start, end, q } = req.query; // Recibimos 'q'
     const moduleRoles = req.user?.moduleRoles || [];
-
     let whereCondition = {};
 
-    // Evaluamos jerarquía usando .includes()
-    if (moduleRoles.includes("LEADS_ADMIN")) {
-      whereCondition = {};
-    } else if (moduleRoles.includes("LEADS_AUX")) {
-      whereCondition = {
-        department: {
-          in: ["NUEVOS", "SEMINUEVOS"],
+    // 1. Lógica de roles (igual que antes)
+    if (moduleRoles.includes("LEADS_AUX")) {
+      whereCondition.department = { in: ["NUEVOS", "SEMINUEVOS", "DIGITAL"] };
+    }
+
+    // 2. Si hay búsqueda (q), ignoramos el mes y buscamos en todo el historial
+    if (q) {
+      const isSearchingReturning = q.toLowerCase().includes("reingreso");
+      whereCondition.OR = [
+        { fullName: { contains: q, mode: "insensitive" } },
+        { phone: { contains: q } },
+        { interest: { contains: q, mode: "insensitive" } },
+      ];
+
+      if (isSearchingReturning) {
+        whereCondition.OR.push({ isReturning: true });
+      }
+    }
+    // 3. Si NO hay búsqueda, aplicamos tu filtro de mes normal
+    else if (start && end) {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      whereCondition.OR = [
+        { date: { gte: startDate, lte: endDate } },
+        {
+          comments: {
+            some: {
+              type: "SYSTEM_REACTIVATED",
+              createdAt: { gte: startDate, lte: endDate },
+            },
+          },
         },
-      };
+      ];
     }
 
     const leads = await prisma.lead.findMany({
@@ -118,11 +142,10 @@ export const getLeads = async (req, res) => {
 
     res.json(leads);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al obtener los leads" });
+    console.error("🔥 ERROR EN GET LEADS:", error);
+    res.status(500).json({ error: "Error" });
   }
 };
-
 // 2. Obtener SOLO los leads para recuperación
 export const getRecoveryLeads = async (req, res) => {
   try {

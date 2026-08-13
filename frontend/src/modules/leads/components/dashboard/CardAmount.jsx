@@ -8,8 +8,8 @@ export const CardAmount = ({ title, amount, loading, type }) => {
         <p className="text-2xl font-semibold text-gray-900">
           {type === "count"
             ? (amount?.totalLeads ?? 0)
-            : amount?.totalAmount !== null
-              ? `$${amount.totalAmount?.toLocaleString("es-MX", {
+            : amount?.totalAmount != null
+              ? `$${amount.totalAmount.toLocaleString("es-MX", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`

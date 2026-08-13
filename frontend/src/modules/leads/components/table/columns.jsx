@@ -1,5 +1,5 @@
 // src/modules/leads/columns.jsx
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, RefreshCcw } from "lucide-react";
 import {
   EditableTextCell,
   EditableSelectCell,
@@ -45,12 +45,13 @@ const DEPARTMENT_OPTIONS = [
   { value: "OPERADOR", label: "Operador" },
   { value: "REFACCIONES", label: "Refacciones" },
   { value: "DIGITAL", label: "Digital" },
-  { value: "COMONUEVOS", label: "Comonuevos" },
+  { value: "SEMINUEVOS", label: "SEMINUEVOS" },
 ];
 
 const PHASE_OPTIONS = [
   { value: "R1_POR_CONTACTAR", label: "R1" },
   { value: "R2_CONTACTADO", label: "R2" },
+  { value: "R3_ASIGNADO", label: "R3" },
 ];
 
 const checkboxColumn = (accessorKey, label, updateData, getDisabled) => ({
@@ -65,19 +66,12 @@ const checkboxColumn = (accessorKey, label, updateData, getDisabled) => ({
   ),
 });
 
-export function buildLeadsColumns(updateData, users, updateMultiple) {
-  const asesoresOptions = (users || [])
-    .filter((user) => user?.area?.name === "Asesores de ventas")
-    .map((user) => ({
-      value: user.name,
-      label: user.name,
-    }));
-  const responsablesOptions = (users || [])
-    .filter((user) => user?.moduleRoles?.includes("LEADS_RESPONSABLE"))
-    .map((user) => ({
-      value: user.name,
-      label: user.name,
-    }));
+export function buildLeadsColumns(
+  updateData,
+  asesoresOptions,
+  responsablesOptions,
+  updateMultiple,
+) {
   const isVentaLocked = (lead) =>
     VENTA_AUTO_LOCK_DEPARTMENTS.includes(lead.department) &&
     !!lead.amount &&
@@ -110,6 +104,10 @@ export function buildLeadsColumns(updateData, users, updateMultiple) {
     {
       header: SortableHeader("Área"),
       accessorKey: "department",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+        return filterValues.includes(row.getValue(columnId));
+      },
       cell: (props) => (
         <BadgeSelectCell
           {...props}
@@ -137,6 +135,10 @@ export function buildLeadsColumns(updateData, users, updateMultiple) {
     {
       header: SortableHeader("Asignación"),
       accessorKey: "assignment",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+        return filterValues.includes(row.getValue(columnId));
+      },
       cell: (props) => (
         <BadgeSelectCell
           {...props}
@@ -157,6 +159,14 @@ export function buildLeadsColumns(updateData, users, updateMultiple) {
     {
       header: SortableHeader("Estado"),
       accessorKey: "status",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+        return filterValues.includes(row.getValue(columnId));
+      },
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+        return filterValues.includes(row.getValue(columnId));
+      },
       cell: (props) => (
         <BadgeSelectCell
           {...props}
@@ -168,6 +178,9 @@ export function buildLeadsColumns(updateData, users, updateMultiple) {
     {
       header: SortableHeader("Fase"),
       accessorKey: "contactState",
+      filterFn: (row, columnId, filterValues) => {
+        return filterValues.includes(row.getValue(columnId));
+      },
       cell: (props) => (
         <EditableSelectCell
           {...props}
@@ -176,13 +189,45 @@ export function buildLeadsColumns(updateData, users, updateMultiple) {
         />
       ),
     },
-    checkboxColumn("isReturning", "Reingreso", updateData),
+    {
+      accessorKey: "isReturning",
+      header: "Reingreso",
+      filterFn: (row, columnId, filterValues) => {
+        return filterValues.includes(row.getValue(columnId));
+      },
+      cell: ({ row }) => {
+        const isReturning = row.getValue("isReturning");
+
+        if (!isReturning) return null;
+
+        return (
+          <span className="flex items-center gap-1.5 text-brand px-2.5 py-1 rounded-md text-xs font-semibold w-max">
+            <RefreshCcw className="w-3.5 h-3.5" />
+            Reingreso
+          </span>
+        );
+      },
+    },
     checkboxColumn("hasAppointment", "Cita", updateData, isVentaLocked),
     checkboxColumn("showedUp", "Show", updateData, isVentaLocked),
     checkboxColumn("hasQuote", "Cotiz.", updateData),
     {
       header: SortableHeader("Monto Generado"),
       accessorKey: "amount",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues.length) return true;
+
+        const amount = row.getValue(columnId);
+        const hasAmount = amount != null && amount > 0;
+
+        // Evaluamos según lo que haya seleccionado el usuario en el menú
+        const matchesConVenta =
+          filterValues.includes("has_amount") && hasAmount;
+        const matchesSinVenta =
+          filterValues.includes("no_amount") && !hasAmount;
+
+        return matchesConVenta || matchesSinVenta;
+      },
       cell: (props) => (
         <div className="flex items-center w-24">
           <span className="text-gray-500 mr-1">$</span>

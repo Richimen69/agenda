@@ -39,8 +39,8 @@ export const ImportLeadsModal = ({
     setDuplicates([]);
     setResult(null);
     setError("");
-    setDuplicateChecked(false); 
-    setRowsWithDuplicateInfo([]); 
+    setDuplicateChecked(false);
+    setRowsWithDuplicateInfo([]);
   };
 
   const handleClose = () => {
@@ -59,6 +59,55 @@ export const ImportLeadsModal = ({
     setRowsWithDuplicateInfo(classified);
     setDuplicateChecked(true);
   };
+  const toggleRowExclusion = (index) => {
+    setRowsWithDuplicateInfo((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) return row;
+        // Solo las filas con duplicado real (recent/returning) son opcionales
+        if (row.duplicateStatus === "none") return row;
+        return {
+          ...row,
+          duplicateStatus:
+            row.duplicateStatus === "excluded"
+              ? row.previousDuplicateStatus
+              : "excluded",
+          previousDuplicateStatus:
+            row.duplicateStatus === "excluded"
+              ? undefined
+              : row.duplicateStatus,
+        };
+      }),
+    );
+  };
+  const toggleAllDuplicates = (include) => {
+    setRowsWithDuplicateInfo((prev) =>
+      prev.map((row) => {
+        if (row.duplicateStatus === "none") return row; // los "Nuevo" no se tocan, nunca son opcionales
+
+        if (include) {
+          // Restaura al estado original (returning o recent), no siempre "returning" a fuerzas
+          return {
+            ...row,
+            duplicateStatus: row.previousDuplicateStatus || row.duplicateStatus,
+            previousDuplicateStatus: undefined,
+          };
+        }
+        // Excluir: solo si no estaba ya excluido
+        if (row.duplicateStatus === "excluded") return row;
+        return {
+          ...row,
+          duplicateStatus: "excluded",
+          previousDuplicateStatus: row.duplicateStatus,
+        };
+      }),
+    );
+  };
+  const duplicateRows = rowsWithDuplicateInfo.filter(
+    (r) => r.duplicateStatus !== "none" || r.previousDuplicateStatus,
+  );
+  const allIncluded = duplicateRows.every(
+    (r) => r.duplicateStatus !== "excluded",
+  );
 
   const handleImport = async () => {
     // Los "returning" se importan normal pero forzando isReturning: true
@@ -294,7 +343,7 @@ export const ImportLeadsModal = ({
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
               Revisa antes de importar: los leads existentes se marcarán como
-              reingreso en vez de duplicarse.
+              reingreso. Puedes omitir los que no quieras importar.
             </p>
 
             <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-md">
@@ -304,32 +353,71 @@ export const ImportLeadsModal = ({
                     <th className="text-left px-2 py-1.5">Nombre</th>
                     <th className="text-left px-2 py-1.5">Teléfono</th>
                     <th className="text-left px-2 py-1.5">Estado</th>
+                    <th className="text-center px-2 py-1.5">
+                      <label className="inline-flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={allIncluded}
+                          onChange={(e) =>
+                            toggleAllDuplicates(e.target.checked)
+                          }
+                          className="w-3.5 h-3.5"
+                        />
+                        <span className="text-[10px] text-gray-500">Todos</span>
+                      </label>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rowsWithDuplicateInfo.map((row, i) => (
-                    <tr key={i} className="border-t border-gray-50">
-                      <td className="px-2 py-1.5">{row.fullName}</td>
-                      <td className="px-2 py-1.5">{row.phone}</td>
-                      <td className="px-2 py-1.5">
-                        {row.duplicateStatus === "none" && (
-                          <span className="text-green-600">Nuevo</span>
-                        )}
-                        {row.duplicateStatus === "returning" && (
-                          <span className="text-blue-600">
-                            Reingreso (hace {row.duplicateMatch.daysSince} días)
-                          </span>
-                        )}
-                        {row.duplicateStatus === "recent" && (
-                          <span className="text-orange-500">
-                            ⚠ Posible duplicado (hace{" "}
-                            {row.duplicateMatch.daysSince} días,{" "}
-                            {row.duplicateMatch.status})
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {rowsWithDuplicateInfo.map((row, i) => {
+                    const isDuplicate = row.duplicateStatus !== "none";
+                    const isExcluded = row.duplicateStatus === "excluded";
+
+                    return (
+                      <tr
+                        key={i}
+                        className={`border-t border-gray-50 ${isExcluded ? "opacity-40" : ""}`}
+                      >
+                        <td className="px-2 py-1.5">{row.fullName}</td>
+                        <td className="px-2 py-1.5">{row.phone}</td>
+                        <td className="px-2 py-1.5">
+                          {row.duplicateStatus === "none" && (
+                            <span className="text-green-600">Nuevo</span>
+                          )}
+                          {row.duplicateStatus === "returning" && (
+                            <span className="text-blue-600">
+                              Reingreso (hace {row.duplicateMatch.daysSince}{" "}
+                              días)
+                            </span>
+                          )}
+                          {row.duplicateStatus === "recent" && (
+                            <span className="text-orange-500">
+                              ⚠ Posible duplicado (hace{" "}
+                              {row.duplicateMatch.daysSince} días,{" "}
+                              {row.duplicateMatch.status})
+                            </span>
+                          )}
+                          {isExcluded && (
+                            <span className="text-gray-400 italic">
+                              Omitido
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          {isDuplicate && (
+                            <label className="inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={!isExcluded}
+                                onChange={() => toggleRowExclusion(i)}
+                                className="w-3.5 h-3.5"
+                              />
+                            </label>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -357,10 +445,20 @@ export const ImportLeadsModal = ({
               </button>
               <button
                 onClick={handleImport}
-                disabled={!rowsWithDuplicateInfo.length || !!importProgress}
+                disabled={
+                  !rowsWithDuplicateInfo.filter(
+                    (r) => r.duplicateStatus !== "excluded",
+                  ).length || !!importProgress
+                }
                 className="px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b] disabled:opacity-50"
               >
-                Confirmar Importación ({rowsWithDuplicateInfo.length})
+                Confirmar Importación (
+                {
+                  rowsWithDuplicateInfo.filter(
+                    (r) => r.duplicateStatus !== "excluded",
+                  ).length
+                }
+                )
               </button>
             </div>
           </div>

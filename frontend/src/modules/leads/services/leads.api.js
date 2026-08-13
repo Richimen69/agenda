@@ -1,7 +1,15 @@
 import { fetchJSON, API_URL } from "@core/http";
 
-export const getLeads = async () => {
-  return await fetchJSON(`${API_URL}/leads`, "GET");
+export const getLeads = async (filters = {}) => {
+  const { start, end, q } = filters;
+  const params = new URLSearchParams();
+  
+  if (q) params.append("q", q);
+  if (start) params.append("start", start);
+  if (end) params.append("end", end);
+  
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  return await fetchJSON(`${API_URL}/leads${queryString}`, "GET");
 };
 
 export const deleteLead = async (leadId) =>

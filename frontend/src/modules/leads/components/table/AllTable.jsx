@@ -13,12 +13,15 @@ import {
   Download,
   Plus,
   Calendar,
-  Filter,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
-import { Upload as UploadIcon } from "lucide-react";
+import {
+  getAllTableFilters,
+  getAsesoresOptions,
+  getResponsablesOptions,
+} from "../../utils/filterConfigs";
+import { Upload as UploadIcon, MessageSquareText } from "lucide-react";
 
 import { useLeadsTable } from "../../hooks/useLeadsTable";
 import { buildLeadsColumns } from "./columns";
@@ -30,9 +33,17 @@ import {
 import { CreateLeadModal } from "../modals/CreateLeadModal";
 import { ImportLeadsModal } from "../modals/ImportLeadsModal";
 import { LeadTimelineModal } from "../modals/LeadTimelineModal";
-import { MessageSquareText } from "lucide-react";
+import { TableToolbar } from "./TableToolbar";
 
-export const AllTable = ({ leads, onLeadsChange, user, users }) => {
+export const AllTable = ({
+  leads,
+  onLeadsChange,
+  user,
+  users,
+  selectedMonth,
+  onMonthChange,
+  onSearch,
+}) => {
   const {
     data,
     updateCell,
@@ -45,15 +56,31 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
     addComment,
     creating,
   } = useLeadsTable(leads, onLeadsChange);
+  
   const [timelineLeadId, setTimelineLeadId] = useState(null);
   const timelineLead = data.find((l) => l.id === timelineLeadId) || null;
   const [globalFilter, setGlobalFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const debouncedSetFilter = useMemo(() => debounce(setGlobalFilter, 250), []);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  
+  // ESTE ESTADO SÍ SE QUEDA (TanStack Table lo necesita)
+  const [columnFilters, setColumnFilters] = useState([]);
+
+  const FILTER_CONFIG = useMemo(() => getAllTableFilters(users), [users]);
+  const asesoresOptions = useMemo(() => getAsesoresOptions(users), [users]);
+  const responsablesOptions = useMemo(
+    () => getResponsablesOptions(users),
+    [users],
+  );
+
   const columns = useMemo(
     () => [
-      ...buildLeadsColumns(updateCell, users, updateMultipleCells),
+      ...buildLeadsColumns(
+        updateCell,
+        asesoresOptions,
+        responsablesOptions,
+        updateMultipleCells,
+      ),
       {
         id: "timeline",
         header: () => <span></span>,
@@ -81,14 +108,20 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
         ),
       },
     ],
-    [updateCell, removeLead, updateMultipleCells],
+    [updateCell, removeLead, updateMultipleCells, asesoresOptions, responsablesOptions], // Nota: agregué las options a las dependencias por seguridad
+  );
+
+  const debouncedBackendSearch = useMemo(
+    () => debounce((value) => onSearch(selectedMonth, value), 500),
+    [selectedMonth, onSearch],
   );
 
   const table = useReactTable({
     data,
     columns,
-    state: { globalFilter },
+    state: { globalFilter, columnFilters },
     onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
     globalFilterFn: globalLeadFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -96,10 +129,6 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 25 } },
   });
-  const handleCreate = async (formData) => {
-    const ok = await addLead(formData);
-    if (ok) setModalOpen(false);
-  };
 
   const filteredCount = table.getFilteredRowModel().rows.length;
 
@@ -138,18 +167,17 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
 
       {/* CONTENEDOR PRINCIPAL */}
       <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 overflow-hidden">
-        {/* BARRA DE HERRAMIENTAS */}
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 border-b border-gray-100 gap-4">
-          <div className="flex items-center gap-2 text-gray-400 w-full lg:w-auto px-1">
-            <Search className="w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, teléfono, origen o responsable..."
-              onChange={(e) => debouncedSetFilter(e.target.value)}
-              className="text-sm outline-none w-full lg:w-96 text-gray-700 bg-transparent placeholder-gray-400"
-            />
-          </div>
-        </div>
+        
+        {/* BARRA DE HERRAMIENTAS - Ahora súper limpia */}
+        <TableToolbar
+          searchPlaceholder="Buscar en historial..."
+          onSearch={(e) => debouncedBackendSearch(e.target.value)}
+          selectedMonth={selectedMonth}
+          onMonthChange={onMonthChange}
+          filterConfig={FILTER_CONFIG}
+          columnFilters={columnFilters}
+          setColumnFilters={setColumnFilters}
+        />
 
         {/* TABLA */}
         <div className="overflow-x-auto">
@@ -253,6 +281,8 @@ export const AllTable = ({ leads, onLeadsChange, user, users }) => {
           </div>
         </div>
       </div>
+      
+      {/* MODALES */}
       <CreateLeadModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

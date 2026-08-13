@@ -1,7 +1,13 @@
 import { AllTable } from "../components/table/AllTable";
 import { AuxTable } from "../components/table/AuxTable";
-export default function LeadsPage({ leads, onLeadsChange, authUser, users }) {
-  console.log(authUser);
+export default function LeadsPage({
+  leads,
+  leadsMonth,
+  fetchLeadsByMonth,
+  onLeadsChange,
+  authUser,
+  users,
+}) {
   const TableComponent = authUser.moduleRoles.includes("LEADS_ADMIN")
     ? AllTable
     : AuxTable;
@@ -12,6 +18,9 @@ export default function LeadsPage({ leads, onLeadsChange, authUser, users }) {
         onLeadsChange={onLeadsChange}
         user={authUser}
         users={users}
+        selectedMonth={leadsMonth}
+        onMonthChange={(newMonth) => fetchLeadsByMonth(newMonth, "")}
+        onSearch={fetchLeadsByMonth}
       />
     </div>
   );

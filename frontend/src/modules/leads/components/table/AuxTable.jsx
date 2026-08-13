@@ -8,20 +8,31 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import {
-  Search,
   ChevronLeft,
   ChevronRight,
   MessageSquareText,
   Trash2,
   Plus,
-} from "lucide-react";
+} from "lucide-react"; // Se quitaron Search y Calendar
 import { useLeadsTable } from "../../hooks/useLeadsTable";
 import { buildAuxColumns } from "./auxColumns";
 import { LeadTimelineModal } from "../modals/LeadTimelineModal";
 import { debounce, globalLeadFilter } from "../../utils/leadsHelpers";
 import { CreateLeadModal } from "../modals/CreateLeadModal";
 
-export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
+// 1. IMPORTAMOS EL TOOLBAR Y LA CONFIGURACIÓN DE FILTROS
+import { TableToolbar } from "./TableToolbar";
+import { getAuxTableFilters } from "../../utils/filterConfigs";
+
+export const AuxTable = ({
+  leads,
+  onLeadsChange,
+  user,
+  users,
+  selectedMonth,
+  onMonthChange,
+  onSearch,
+}) => {
   const {
     data,
     updateCell,
@@ -44,7 +55,18 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
   const [globalFilter, setGlobalFilter] = useState("");
   const [timelineLeadId, setTimelineLeadId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  
+  // 2. NUEVO ESTADO PARA LOS FILTROS DE COLUMNAS
+  const [columnFilters, setColumnFilters] = useState([]);
+
+  // 3. OBTENEMOS LA CONFIGURACIÓN DE FILTROS PARA AUXTABLE
+  const FILTER_CONFIG_AUX = useMemo(() => getAuxTableFilters(users), [users]);
+
   const debouncedSetFilter = useMemo(() => debounce(setGlobalFilter, 250), []);
+  const debouncedBackendSearch = useMemo(
+    () => debounce((value) => onSearch(selectedMonth, value), 500),
+    [selectedMonth, onSearch],
+  );
 
   const columns = useMemo(
     () => [
@@ -82,8 +104,10 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
   const table = useReactTable({
     data,
     columns,
-    state: { globalFilter },
+    // 4. AGREGAMOS COLUMNFILTERS AL ESTADO DE TANSTACK
+    state: { globalFilter, columnFilters }, 
     onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters, 
     globalFilterFn: globalLeadFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -114,18 +138,17 @@ export const AuxTable = ({ leads, onLeadsChange, user, users }) => {
 
       {/* CONTENEDOR PRINCIPAL */}
       <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 overflow-hidden">
-        {/* BARRA DE HERRAMIENTAS */}
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 border-b border-gray-100 gap-4">
-          <div className="flex items-center gap-2 text-gray-400 w-full lg:w-auto px-1">
-            <Search className="w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Buscar por cliente, teléfono, interés u origen..."
-              onChange={(e) => debouncedSetFilter(e.target.value)}
-              className="text-sm outline-none w-full lg:w-96 text-gray-700 bg-transparent placeholder-gray-400"
-            />
-          </div>
-        </div>
+        
+        {/* 5. NUESTRO NUEVO COMPONENTE DE BARRA DE HERRAMIENTAS */}
+        <TableToolbar
+          searchPlaceholder="Buscar por cliente, teléfono, interés u origen..."
+          onSearch={(e) => debouncedBackendSearch(e.target.value)}
+          selectedMonth={selectedMonth}
+          onMonthChange={onMonthChange}
+          filterConfig={FILTER_CONFIG_AUX}
+          columnFilters={columnFilters}
+          setColumnFilters={setColumnFilters}
+        />
 
         {/* TABLA */}
         <div className="overflow-x-auto">

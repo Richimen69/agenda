@@ -459,6 +459,7 @@ enum RecoveryStatus {
 enum ContactState {
   R1_POR_CONTACTAR
   R2_CONTACTADO
+  R3_ASIGNADO
 }
 
 enum SessionStatus {
