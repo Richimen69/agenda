@@ -8,6 +8,7 @@ import {
   normalizeFloat,
   normalizeSource,
   normalizeContactMethod,
+  normalizeFase,
 } from "./enumMappers";
 
 // Campos que tu sistema espera. Ajusta según tu modelo real.
@@ -36,6 +37,9 @@ export function normalizeDate(value) {
 
   return null; // no se pudo parsear — mejor null que reventar Prisma
 }
+const FIELDS_ALSO_LOGGED_AS_COMMENT = {
+  lostReason: (value) => `Motivo (R2): ${value}`,
+};
 export const LEAD_FIELDS = [
   { key: "fullName", label: "Nombre completo", required: true },
   {
@@ -66,7 +70,6 @@ export const LEAD_FIELDS = [
     required: false,
     enumMap: normalizeContactMethod,
   },
-  { key: "lostReason", label: "Motivo", required: false }, // NUEVO — mapea directo a MOTIVO
   {
     key: "firstContactTime",
     label: "Tiempo de contacto",
@@ -78,6 +81,12 @@ export const LEAD_FIELDS = [
     label: "Asignación",
     required: false,
     transform: normalizeAssignment,
+  },
+  {
+    key: "contactState",
+    label: "Fase",
+    required: false,
+    transform: normalizeFase,
   },
   {
     key: "branch",
@@ -127,12 +136,12 @@ export const LEAD_FIELDS = [
   },
   {
     key: "followUpNote",
-    label: "Seguimiento",
+    label: "Motivo",
     required: false,
     isComment: true,
     buildComment: (raw) =>
       raw?.trim()
-        ? { text: `Seguimiento: ${raw.trim()}`, type: "USER_NOTE" }
+        ? { text: `Motivo: ${raw.trim()}`, type: "USER_NOTE" }
         : null,
   },
   {
@@ -172,7 +181,7 @@ export function applyColumnMapping(rows, mapping) {
         if (field.isComment) {
           const comment = field.buildComment(raw);
           if (comment) comments.push(comment);
-          return; // no se agrega a "mapped", no es un campo de Lead
+          return;
         }
 
         if (field.enumMap) {
@@ -180,7 +189,7 @@ export function applyColumnMapping(rows, mapping) {
           mapped[field.key] = result.value;
           if (result.wasUnmapped && result.original) {
             warnings.push(
-              `${field.label}: "${result.original}" no coincide con ningún valor conocido, se usó "${result.value}" por defecto`,
+              `${field.label}: "${result.original}" no coincide, se usó "${result.value}" por defecto`,
             );
           }
         } else {
@@ -188,9 +197,14 @@ export function applyColumnMapping(rows, mapping) {
             ? field.transform(raw)
             : String(raw ?? "").trim();
         }
+
+        const logger = FIELDS_ALSO_LOGGED_AS_COMMENT[field.key];
+        if (logger && mapped[field.key]?.trim?.()) {
+          comments.push({ text: logger(mapped[field.key]), type: "USER_NOTE" });
+        }
       });
 
-      mapped.comments = comments; // no está en LEAD_FIELDS.keys, sanitizeForPrisma lo filtra solo
+      mapped.comments = comments;
       return { data: mapped, warnings };
     })
     .filter((entry) => !isGhostRow(entry.data));

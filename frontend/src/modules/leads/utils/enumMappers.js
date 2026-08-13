@@ -3,29 +3,29 @@ import * as XLSX from "xlsx"; // si ya lo tienes importado en otro lado, quita e
 // --- DEPARTMENT ---
 // Excel (AREA) -> Prisma enum Department
 const DEPARTMENT_MAP = {
-  "NUEVOS": "NUEVOS",
-  "COMONUEVOS": "SEMINUEVOS",           // <- no coinciden textualmente
-  "CITAS DE SERVICIO": "SERVICIO",       // <- no coinciden textualmente
-  "OPERADOR": "OPERADOR",
-  "REFACCIONES": "REFACCIONES",
-  "DIGITAL": "DIGITAL",
+  NUEVOS: "NUEVOS",
+  COMONUEVOS: "SEMINUEVOS", // <- no coinciden textualmente
+  "CITAS DE SERVICIO": "SERVICIO", // <- no coinciden textualmente
+  OPERADOR: "OPERADOR",
+  REFACCIONES: "REFACCIONES",
+  DIGITAL: "DIGITAL",
 };
 
 const CONTACT_METHOD_MAP = {
-  "WHATSAPP": "WHATSAPP",
-  "LLAMADA": "LLAMADA",
+  WHATSAPP: "WHATSAPP",
+  LLAMADA: "LLAMADA",
   "FACEBOOK MESSENGER": "FACEBOOK_MESSENGER",
-  "MESSENGER": "FACEBOOK_MESSENGER",
-  "INSTAGRAM": "INSTAGRAM",
+  MESSENGER: "FACEBOOK_MESSENGER",
+  INSTAGRAM: "INSTAGRAM",
   "FORMULARIO WEB": "FORMULARIO_WEB",
 };
 
 // --- BRANCH ---
 const BRANCH_MAP = {
-  "GUERRERO": "GUERRERO",
-  "CHILPANCINGO": "CHILPANCINGO",
-  "TOYOTA DIGITAL": "DIGITAL",           // <- no coinciden textualmente
-  "DIGITAL": "DIGITAL",
+  GUERRERO: "GUERRERO",
+  CHILPANCINGO: "CHILPANCINGO",
+  "TOYOTA DIGITAL": "DIGITAL", // <- no coinciden textualmente
+  DIGITAL: "DIGITAL",
 };
 
 // --- LEAD STATUS ---
@@ -34,11 +34,16 @@ const BRANCH_MAP = {
 // atención registrada) — pero se marca como advertencia para que
 // el usuario decida caso por caso si prefiere ATENDIDO.
 const STATUS_MAP = {
-  "NUEVO": "NUEVO",
-  "ATENDIDO": "ATENDIDO",
-  "AGENDADO": "AGENDADO",
-  "PERDIDO": "PERDIDO",
-  "ASIGNADO": "NUEVO", // decisión por defecto, ver nota abajo
+  NUEVO: "NUEVO",
+  ATENDIDO: "ATENDIDO",
+  AGENDADO: "AGENDADO",
+  PERDIDO: "PERDIDO",
+  ASIGNADO: "NUEVO", // decisión por defecto, ver nota abajo
+};
+const FASE_MAP = {
+  R1_POR_CONTACTAR: "R1_POR_CONTACTAR",
+  R2_CONTACTADO: "R2_CONTACTADO",
+  R3_ASIGNADO: "R3_ASIGNADO",
 };
 
 /**
@@ -46,7 +51,9 @@ const STATUS_MAP = {
  * Devuelve { value, wasUnmapped, original } para poder marcar advertencias.
  */
 function mapToEnum(rawValue, map, fallback) {
-  const key = String(rawValue ?? "").trim().toUpperCase();
+  const key = String(rawValue ?? "")
+    .trim()
+    .toUpperCase();
   if (map[key]) {
     return { value: map[key], wasUnmapped: false, original: rawValue };
   }
@@ -63,6 +70,12 @@ export function normalizeBranch(value) {
 
 export function normalizeStatus(value) {
   return mapToEnum(value, STATUS_MAP, "NUEVO");
+}
+
+export function normalizeFase(value) {
+  const result = mapToEnum(value, FASE_MAP, null);
+  
+  return result?.value || null; 
 }
 
 /**
@@ -97,9 +110,15 @@ export function normalizeSource(value) {
 }
 
 export function normalizeContactMethod(value) {
-  const key = String(value ?? "").trim().toUpperCase();
+  const key = String(value ?? "")
+    .trim()
+    .toUpperCase();
   if (CONTACT_METHOD_MAP[key]) {
-    return { value: CONTACT_METHOD_MAP[key], wasUnmapped: false, original: value };
+    return {
+      value: CONTACT_METHOD_MAP[key],
+      wasUnmapped: false,
+      original: value,
+    };
   }
   return { value: "WHATSAPP", wasUnmapped: true, original: value };
 }

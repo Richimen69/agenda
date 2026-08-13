@@ -78,6 +78,16 @@ export const updateLead = async (req, res) => {
           },
         });
       }
+      if (data.lostReason && data.lostReason !== existingLead.lostReason) {
+        await tx.leadComment.create({
+          data: {
+            leadId,
+            text: `Motivo (R2): ${data.lostReason}`,
+            author: "Sistema",
+            type: "USER_NOTE",
+          },
+        });
+      }
 
       return lead;
     });
