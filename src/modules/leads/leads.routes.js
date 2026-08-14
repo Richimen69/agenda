@@ -23,7 +23,7 @@ router.get(
   requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"),
   getRecoveryLeads,
 );
-router.post("/", requireModuleAccess("LEADS_ADMIN"), createLead);
+router.post("/", requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"), createLead);
 router.put("/:id", requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"), updateLead);
 router.post(
   "/:leadId/comments",
