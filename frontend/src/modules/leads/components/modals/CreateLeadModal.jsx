@@ -169,7 +169,7 @@ export const CreateLeadModal = ({
                 <option value="OPERADOR">Operador</option>
                 <option value="REFACCIONES">Refacciones</option>
                 <option value="DIGITAL">Digital</option>
-                <option value="COMONUEVOS">Comonuevos</option>
+                <option value="SEMINUEVOS">SEMINUEVOS</option>
               </select>
             </div>
           )}
