@@ -4,8 +4,8 @@ import * as XLSX from "xlsx"; // si ya lo tienes importado en otro lado, quita e
 // Excel (AREA) -> Prisma enum Department
 const DEPARTMENT_MAP = {
   NUEVOS: "NUEVOS",
-  COMONUEVOS: "SEMINUEVOS", // <- no coinciden textualmente
-  "CITAS DE SERVICIO": "SERVICIO", // <- no coinciden textualmente
+  SEMINUEVOS: "SEMINUEVOS",
+  "CITAS DE SERVICIO": "SERVICIO",
   OPERADOR: "OPERADOR",
   REFACCIONES: "REFACCIONES",
   DIGITAL: "DIGITAL",

@@ -10,10 +10,13 @@ import {
   checkDuplicatePhones,
   reactivateLead,
   getCampaignResults,
+} from "./leads.controller.js";
+import {
+  getGeneratedAmount,
+  getLeadsCount,
   getRecoveryFunnel,
   getDigitalFunnel,
-} from "./leads.controller.js";
-import { getGeneratedAmount, getLeadsCount } from "./kpi.controller.js";
+} from "./kpi.controller.js";
 
 const router = Router();
 
