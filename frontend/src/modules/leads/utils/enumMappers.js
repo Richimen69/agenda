@@ -28,11 +28,6 @@ const BRANCH_MAP = {
   DIGITAL: "DIGITAL",
 };
 
-// --- LEAD STATUS ---
-// Ojo: tu Excel tiene "ASIGNADO" y el enum NO lo contempla.
-// Se mapea a NUEVO por defecto (asignado a un asesor pero aún sin
-// atención registrada) — pero se marca como advertencia para que
-// el usuario decida caso por caso si prefiere ATENDIDO.
 const STATUS_MAP = {
   NUEVO: "NUEVO",
   ATENDIDO: "ATENDIDO",

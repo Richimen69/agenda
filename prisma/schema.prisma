@@ -417,6 +417,7 @@ enum ModuleRole {
   LEADS_ADMIN
   LEADS_AUX
   LEADS_RESPONSABLE
+  LIVE_ADMIN
 }
 
 enum Department {

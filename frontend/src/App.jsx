@@ -15,6 +15,7 @@ import ProyectosPage from "@modules/programas/pages/ProyectosPage";
 import DashboardPage from "@modules/dashboard/pages/DashboardPage";
 import LeadsPage from "./modules/leads/pages/LeadsPage";
 import { sileo, Toaster } from "sileo";
+import ProjectDetailPage from "./modules/programas/pages/ProjectDetailPage";
 
 // NUEVAS IMPORTACIONES DEL MÓDULO LIVE
 import { AdminLive } from "@modules/live/pages/AdminLive";
@@ -118,7 +119,7 @@ export default function App() {
                 />
               }
             />
-
+            <Route path="/proyectos/:id" element={<ProjectDetailPage />} /> 
             {/* Consola técnica del taller */}
             <Route
               path="live-tech"

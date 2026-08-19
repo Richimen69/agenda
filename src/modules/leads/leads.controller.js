@@ -55,8 +55,32 @@ export const updateLead = async (req, res) => {
         .json({ success: false, error: "Lead no encontrado" });
     }
 
+    if (
+      data.assignment &&
+      data.assignment.trim() !== "" &&
+      (!existingLead.assignment || existingLead.assignment.trim() === "")
+    ) {
+      data.recoveryStatus = "EN_SEGUIMIENTO";
+      data.needsRecovery = true;
+    }
+
     const updatedLead = await prisma.$transaction(async (tx) => {
       const lead = await tx.lead.update({ where: { id: leadId }, data });
+
+      if (
+        data.recoveryStatus === "EN_SEGUIMIENTO" &&
+        existingLead.recoveryStatus !== "EN_SEGUIMIENTO" &&
+        data.assignment
+      ) {
+        await tx.leadComment.create({
+          data: {
+            leadId,
+            text: `Asignado a ${data.assignment} en seguimiento`,
+            author: "Sistema",
+            type: "USER_NOTE",
+          },
+        });
+      }
 
       if (data.status && data.status !== existingLead.status) {
         await tx.leadComment.create({
@@ -345,4 +369,3 @@ export const getCampaignResults = async (req, res) => {
     });
   }
 };
-

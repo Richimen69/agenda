@@ -24,7 +24,7 @@ export default function TicketDetailPage({ authUser }) {
     try {
       const result = await deleteTicket(id, authUser.id);
       if (result.success) {
-        window.location.href = "/";
+        window.location.href = "/tareas";
       }
     } catch {
       alert("Error al eliminar el proyecto.");

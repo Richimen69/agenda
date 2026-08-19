@@ -10,10 +10,10 @@ export const RecoveryFunnel = ({ data }) => {
   if (!data) return null;
 
   const steps = [
-    { value: data.conversaciones, label: "conversaciones con leads" },
+    { value: data.leadsTotales, label: "conversaciones con leads" },
     { value: data.enSeguimiento, label: "en seguimiento", badge: `${data.conversionRate}% de conversión` },
-    { value: data.noContactables, label: "no contactables" },
-    { value: data.recuperados, label: "recuperados y asignados", badge: `${data.recuperacionRate}% recuperados` },
+    { value: data.noContactables, label: "no contactados" },
+    { value: data.recuperados, label: "llamadas realizadas", badge: `${data.recuperacionRate}% llamadas` },
     { value: data.traidosDeVuelta, label: "clientes traídos de vuelta para nuevos y comonuevos", badge: `${data.efectividadRate}% de efectividad` },
   ];
 

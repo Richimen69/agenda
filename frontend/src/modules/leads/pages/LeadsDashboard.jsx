@@ -19,6 +19,7 @@ import {
 import { RecoveryFunnel } from "../components/dashboard/RecoveryFunnel";
 import { DigitalFunnel } from "../components/dashboard/DigitalFunnel";
 import { CardAmount } from "../components/dashboard/CardAmount";
+import { CombinedFunnelChart } from "../components/dashboard/CombinedFunnelChart";
 
 const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -94,47 +95,7 @@ export const LeadsDashboard = () => {
         <p className="text-gray-400 text-sm">Cargando dashboard...</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* PANEL: Resultados por Campaña */}
-          <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="w-4 h-4 text-brand" />
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                Resultados por Campaña
-              </h3>
-            </div>
-
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={campaigns?.data || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f1" />
-                <XAxis
-                  dataKey="campaign"
-                  tick={{ fontSize: 11 }}
-                  interval={0}
-                  angle={-15}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar
-                  dataKey="leads"
-                  fill="#e8543b"
-                  radius={[4, 4, 0, 0]}
-                  name="Leads generados"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-
-            <div className="flex justify-center mt-3">
-              <div className="flex items-center gap-2 bg-red-50 text-brand px-4 py-1.5 rounded-full text-sm font-medium">
-                <Users className="w-4 h-4" />
-                Total: {campaigns?.totalLeads || 0} leads
-              </div>
-            </div>
-          </div>
-
           {/* PANEL: Seguimiento y Recuperación */}
-          <RecoveryFunnel data={funnel} />
           <div className="col-span-2 grid grid-cols-2 gap-4">
             <CardAmount
               title="Leads"
@@ -149,13 +110,16 @@ export const LeadsDashboard = () => {
               type="amount"
             />
           </div>
-          <div className="col-span-2 grid grid-cols-3 gap-6">
+          <div className="col-span-2 grid lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+            <RecoveryFunnel data={funnel} />
             <DigitalFunnel data={nuevosFunnel} title="Autos Nuevos" />
             <DigitalFunnel data={seminuevosFunnel} title="Seminuevos" />
-            <DigitalFunnel data={servicioFunnel} title="Servicio" />
-            <DigitalFunnel data={refaccionesFunnel} title="Refacciones" />
-            <DigitalFunnel data={digitalFunnel} title="Digital" />
           </div>
+          <CombinedFunnelChart
+            digitalData={digitalFunnel}
+            servicioData={servicioFunnel}
+            refaccionesData={refaccionesFunnel}
+          />
         </div>
       )}
     </div>

@@ -114,94 +114,77 @@ export const getRecoveryFunnel = async (req, res) => {
   const { month } = req.query;
 
   try {
-    const startDate = new Date(`${month}-01T00:00:00.000Z`);
+    const startDate = new Date(`${month}-01T00:00:00.000-06:00`);
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + 1);
 
-const targetDepartments = { in: ["NUEVOS", "SEMINUEVOS"] };
+    const targetDepartments = { in: ["NUEVOS", "SEMINUEVOS"] };
 
-    const [
-      conversaciones,
-      enSeguimiento,
-      noContactables,
-      recuperados,
-      traidosDeVuelta,
-      totalLeads,
-    ] = await Promise.all([
-      // 1. Comentarios totales (solo de los departamentos seleccionados)
-      prisma.leadComment.count({
-        where: { 
-          lead: { 
+    const [leadsTotales, enSeguimiento, recuperados, traidosDeVuelta] =
+      await Promise.all([
+        // 1. Leads totales
+        prisma.lead.count({
+          where: {
             date: { gte: startDate, lt: endDate },
-            department: targetDepartments
-          } 
-        },
-      }),
-      // 2. Leads en seguimiento
-      prisma.lead.count({
-        where: {
-          recoveryStatus: "EN_SEGUIMIENTO",
-          date: { gte: startDate, lt: endDate },
-          department: targetDepartments
-        },
-      }),
-      // 3. Leads no contactables
-      prisma.lead.count({
-        where: {
-          recoveryStatus: "NO_CONTACTABLE",
-          date: { gte: startDate, lt: endDate },
-          department: targetDepartments
-        },
-      }),
-      // 4. Leads recuperados
-      prisma.lead.count({
-        where: {
-          contactState: "R2_CONTACTADO",
-          date: { gte: startDate, lt: endDate },
-          department: targetDepartments
-        },
-      }),
-      // 5. Comentarios de reactivación
-      prisma.leadComment.count({
-        where: {
-          type: "SYSTEM_REACTIVATED",
-          lead: { 
-            date: { gte: startDate, lt: endDate },
-            department: targetDepartments
+            department: targetDepartments,
           },
-        },
-      }),
-      // 6. Total de leads de esos departamentos
-      prisma.lead.count({ 
-        where: { 
-          date: { gte: startDate, lt: endDate },
-          department: targetDepartments 
-        } 
-      }),
-    ]);
+        }),
+        // 2. Leads en seguimiento
+        prisma.lead.count({
+          where: {
+            recoveryStatus: "EN_SEGUIMIENTO",
+            date: { gte: startDate, lt: endDate },
+            department: targetDepartments,
+          },
+        }),
+        // 3. Leads recuperados
+        prisma.lead.count({
+          where: {
+            contactState: "R2_CONTACTADO",
+            date: { gte: startDate, lt: endDate },
+            department: targetDepartments,
+          },
+        }),
+        // 4. Comentarios de reactivación
+        prisma.leadComment.count({
+          where: {
+            type: "SYSTEM_REACTIVATED",
+            lead: {
+              date: { gte: startDate, lt: endDate },
+              department: targetDepartments,
+            },
+          },
+        }),
+      ]);
+    const noContactables =
+      enSeguimiento > recuperados
+        ? leadsTotales - enSeguimiento - recuperados
+        : 0;
+
+    const conversionRate =
+      leadsTotales > 0 ? +((enSeguimiento / leadsTotales) * 100).toFixed(1) : 0;
+
+    const recuperacionRate =
+      enSeguimiento + noContactables > 0
+        ? +((recuperados / (enSeguimiento + noContactables)) * 100).toFixed(1)
+        : 0;
+
+    const efectividadRate =
+      leadsTotales > 0
+        ? +((traidosDeVuelta / leadsTotales) * 100).toFixed(1)
+        : 0;
 
     res.json({
       success: true,
       data: {
-        conversaciones,
+        leadsTotales,
         enSeguimiento,
-        noContactables,
         recuperados,
         traidosDeVuelta,
-        conversionRate:
-          conversaciones > 0
-            ? +((enSeguimiento / conversaciones) * 100).toFixed(1)
-            : 0,
-        recuperacionRate:
-          enSeguimiento + noContactables > 0
-            ? +((recuperados / (enSeguimiento + noContactables)) * 100).toFixed(
-                1,
-              )
-            : 0,
-        efectividadRate:
-          totalLeads > 0
-            ? +((traidosDeVuelta / totalLeads) * 100).toFixed(1)
-            : 0,
+        noContactables,
+        conversionRate,
+        recuperacionRate,
+        efectividadRate,
       },
     });
   } catch (error) {
@@ -212,7 +195,6 @@ const targetDepartments = { in: ["NUEVOS", "SEMINUEVOS"] };
     });
   }
 };
-
 export const getDigitalFunnel = async (req, res) => {
   const { month, department } = req.query;
 
