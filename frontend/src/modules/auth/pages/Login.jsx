@@ -17,18 +17,18 @@ const handleSubmit = async (e) => {
 
   try {
     const result = await loginUser(email, password);
-    console.log("loginUser result:", result); // <- agregar
 
     if (result.success) {
-      console.log("Login exitoso, llamando onLoginSuccess con:", result.data); // <- agregar
+      console.log("Login exitoso, llamando onLoginSuccess con:", result.data); 
       localStorage.setItem("authUser", JSON.stringify(result.data));
       onLoginSuccess(result.data);
+
     } else {
-      console.log("Login falló:", result.error); // <- agregar
+      console.log("Login falló:", result.error); 
       setError(result.error || "Credenciales inválidas. Verifica tus datos.");
     }
   } catch (err) {
-    console.log("Excepción atrapada:", err); // <- agregar
+    console.log("Excepción atrapada:", err); 
     setError("Error de conexión con el servidor de autenticación.");
   } finally {
     setIsLoading(false);

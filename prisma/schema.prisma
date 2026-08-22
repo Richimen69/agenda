@@ -60,11 +60,13 @@ model Ticket {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  events    Event[]
-  reminders Reminder[]
-  auditLogs AuditLog[]
-  comments  Comment[]
-  subtasks  Subtask[]
+  events          Event[]
+  reminders       Reminder[]
+  auditLogs       AuditLog[]
+  comments        Comment[]
+  subtasks        Subtask[]
+  projectActionId String?        @unique
+  projectAction   ProjectAction? @relation("TicketToAction", fields: [projectActionId], references: [id], onDelete: Cascade)
 }
 
 // 3. NUEVO: AGENDA COLABORATIVA
@@ -153,7 +155,9 @@ model Subtask {
   assigneeId String?
   assignee   User?   @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
+  createdAt       DateTime       @default(now())
+  projectActionId String?        @unique
+  projectAction   ProjectAction? @relation("SubtaskToAction", fields: [projectActionId], references: [id], onDelete: Cascade)
 }
 
 model ShortLink {
@@ -192,6 +196,7 @@ model Project {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   comments  Comment[]
+  ratios          ProjectRatio[]
 }
 
 model ProjectMember {
@@ -233,6 +238,8 @@ model ProjectAction {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  ticket    Ticket?  @relation("TicketToAction")
+  subtask   Subtask? @relation("SubtaskToAction")
 }
 
 model Kpi {
@@ -405,7 +412,21 @@ model LeadComment {
   author    String // Ej. "Asesor" o "Recuperación"
   createdAt DateTime @default(now())
 }
+model ProjectRatio {
+  id               String   @id @default(uuid())
+  name             String   // Ej. "Costo por Contratación", "Costo por Prospecto"
+  unit             String   // Ej. "MXN/ud", "USD/cl"
+  
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  numeratorNames   String[]   
+  denominatorNames String[]   
+
+  createdAt        DateTime @default(now())
+}
+
+// En el modelo Project agregas: ratios ProjectRatio[]
 enum CommentType {
   SYSTEM_CREATED
   SYSTEM_REACTIVATED
@@ -522,4 +543,6 @@ enum MemberRole {
 enum KpiType {
   ACCUMULABLE @map("ACUMULABLE")
   STATUS      @map("ESTADO")
+  FINANCIAL   @map("FINANCIERO")
+  MILESTONE   @map("HITO")
 }

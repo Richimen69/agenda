@@ -1,5 +1,4 @@
-import prisma from '#config/prisma';
-
+import prisma from "#config/prisma";
 
 export const addProject = async (req, res) => {
   try {
@@ -104,6 +103,13 @@ export const getProjects = async (req, res) => {
             area: { select: { id: true, name: true } },
           },
         },
+        actions: {
+          where: {
+            kpis: { some: {} },
+          },
+          include: { kpis: true },
+        },
+        ratios: true,
       },
     });
 
@@ -117,9 +123,6 @@ export const getProjects = async (req, res) => {
   }
 };
 
-// ==========================================
-// OBTENER DETALLE DE UN PROYECTO
-// ==========================================
 export const getProjectById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -139,6 +142,11 @@ export const getProjectById = async (req, res) => {
           where: { parentId: null }, // Solo traer nivel raíz
           include: { children: true },
         },
+        ratios: true,
+        projectComments: {
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
@@ -154,5 +162,135 @@ export const getProjectById = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, error: "Error al obtener el proyecto." });
+  }
+};
+export const createProjectRatio = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+
+    const { name, unit, numeratorNames, denominatorNames } = req.body;
+    if (
+      !numeratorNames ||
+      !denominatorNames ||
+      numeratorNames.length === 0 ||
+      denominatorNames.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Debes enviar al menos un KPI para el numerador y uno para el denominador.",
+      });
+    }
+
+    const newRatio = await prisma.projectRatio.create({
+      data: {
+        name,
+        unit,
+        numeratorNames,
+        denominatorNames,
+        projectId,
+      },
+    });
+
+    return res.status(201).json({ success: true, data: newRatio });
+  } catch (error) {
+    console.error("Error en createProjectRatio:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Error al crear el ratio de eficiencia.",
+    });
+  }
+};
+
+export const addProjectComment = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { text, userId } = req.body;
+
+    const newComment = await prisma.projectComment.create({
+      data: {
+        text,
+        projectId,
+        userId,
+      },
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    return res.status(201).json({ success: true, data: newComment });
+  } catch (error) {
+    console.error("Error en addProjectComment:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al guardar el comentario." });
+  }
+};
+export const getGlobalDashboard = async (req, res) => {
+  try {
+    // 1. Distribución de Salud de los Proyectos (¿Cuántos verdes, amarillos, rojos?)
+    const healthStats = await prisma.project.groupBy({
+      by: ["health"],
+      _count: { health: true },
+    });
+
+    const healthDistribution = { GREEN: 0, YELLOW: 0, RED: 0 };
+    healthStats.forEach((stat) => {
+      healthDistribution[stat.health] = stat._count.health;
+    });
+
+    // 2. Presupuesto Global de la Empresa
+    // Buscamos todos los KPIs financieros de todos los proyectos activos
+    const financialKpis = await prisma.kpi.aggregate({
+      where: {
+        type: "FINANCIAL",
+        action: { project: { status: { not: "COMPLETED" } } },
+      },
+      _sum: { target: true, currentValue: true },
+    });
+
+    // 3. Proyectos en Riesgo Crítico (Para la lista de atención inmediata)
+    const criticalProjects = await prisma.project.findMany({
+      where: { health: "RED", status: { not: "COMPLETED" } },
+      select: {
+        id: true,
+        title: true,
+        globalProgress: true,
+        targetDate: true,
+        members: {
+          where: { roleType: "OWNER" },
+          select: { user: { select: { name: true } } },
+        },
+      },
+      take: 5, // Solo mostramos el Top 5 más crítico
+    });
+
+    // 4. Promedio de Avance de la Empresa
+    const progressStat = await prisma.project.aggregate({
+      where: { status: { not: "COMPLETED" } },
+      _avg: { globalProgress: true },
+      _count: { id: true },
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        globalMetrics: {
+          totalProjects: progressStat._count.id,
+          overallCompanyProgress: progressStat._avg.globalProgress
+            ? parseFloat(progressStat._avg.globalProgress.toFixed(2))
+            : 0,
+          totalBudget: financialKpis._sum.target || 0,
+          consumedBudget: financialKpis._sum.currentValue || 0,
+        },
+        healthDistribution,
+        criticalAttention: criticalProjects,
+      },
+    });
+  } catch (error) {
+    console.error("Error en getGlobalDashboard:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error calculando métricas globales." });
   }
 };

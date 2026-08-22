@@ -20,7 +20,7 @@ import {
 
 const router = Router();
 
-router.get("/", requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"), getLeads);
+router.get("/", getLeads);
 router.get(
   "/recovery",
   requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"),

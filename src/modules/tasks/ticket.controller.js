@@ -1,5 +1,4 @@
-import prisma from '#config/prisma';
-
+import prisma from "#config/prisma";
 
 export const createTicket = async (req, res) => {
   try {
@@ -204,9 +203,22 @@ export const getTickets = async (req, res) => {
         creator: { select: { name: true } },
         assignees: { select: { id: true, name: true } },
 
-        // ---> ESTA ES LA LÍNEA MÁGICA QUE FALTA <---
-        subtasks: { orderBy: { createdAt: "asc" } },
-
+        subtasks: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            assignee: { select: { name: true } },
+            projectAction: {
+              include: { kpis: true },
+            },
+          },
+        },
+        projectAction: {
+          include: { 
+            project: { select: { title: true, id: true } },
+            kpis: true 
+          },
+        },
+        
         comments: {
           include: { user: { select: { name: true } } },
           orderBy: { createdAt: "asc" },
@@ -229,7 +241,23 @@ export const getTicketById = async (req, res) => {
       include: {
         creator: { select: { name: true } },
         assignees: { select: { id: true, name: true } },
-        subtasks: { orderBy: { createdAt: "asc" } },
+        
+        subtasks: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            assignee: { select: { name: true } },
+            projectAction: {
+              include: { kpis: true },
+            },
+          },
+        },
+        projectAction: {
+          include: { 
+            project: { select: { title: true, id: true } },
+            kpis: true 
+          },
+        },
+
         comments: {
           include: { user: { select: { name: true } } },
           orderBy: { createdAt: "asc" },

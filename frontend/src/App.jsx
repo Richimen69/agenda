@@ -46,21 +46,11 @@ export default function App() {
     if (authUser) fetchData();
   }, [authUser]);
 
-  // =========================================================================
-  // 1. INTERCEPCIÓN PÚBLICA (OMITIR LOGIN PARA CLIENTE Y TÉCNICO EN PRUEBAS)
-  // =========================================================================
   const queryParams = new URLSearchParams(window.location.search);
-  const role = queryParams.get("role"); // "technician", "client", "spectator" o "technician-kiosk"
-  const room = queryParams.get("room"); // ID de la sesión
+  const role = queryParams.get("role");
+  const room = queryParams.get("room");
   const label = queryParams.get("label") || "Servicio";
 
-  // -------------------------------------------------------------------------
-  // KIOSCO DEL TÉCNICO: URL fija por dispositivo, SIN room y SIN login.
-  // Ej: https://tudominio.com/?role=technician-kiosk&technicianId=abc123&name=Juan
-  // El dispositivo se queda esperando y se autoconecta solo en cuanto el
-  // asesor le asigna una sesión desde AdminLive. Va primero porque no
-  // depende de "room" como el resto de los roles de abajo.
-  // -------------------------------------------------------------------------
   const technicianId = queryParams.get("technicianId");
   if (role === "technician-kiosk" && technicianId) {
     return (
@@ -103,7 +93,6 @@ export default function App() {
       <Toaster position="top-center" />
       <BrowserRouter>
         <Routes>
-          {/* RUTA INTERNA: Consola de Transmisión del Técnico dentro de tu Layout */}
           <Route
             path="/"
             element={<Layout authUser={authUser} onLogout={handleLogout} />}
@@ -114,12 +103,15 @@ export default function App() {
               element={
                 <AdminLive
                   authUser={authUser}
-                  users={users} // Reutiliza tus usuarios para asignarlos a las sesiones
+                  users={users}
                   onSessionsChange={fetchData}
                 />
               }
             />
-            <Route path="/proyectos/:id" element={<ProjectDetailPage />} /> 
+            <Route
+              path="/proyectos/:id"
+              element={<ProjectDetailPage creatorId={authUser.id} />}
+            />
             {/* Consola técnica del taller */}
             <Route
               path="live-tech"
@@ -230,6 +222,7 @@ export default function App() {
               path="marketing"
               element={<MarketingPage authUser={authUser} />}
             />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>

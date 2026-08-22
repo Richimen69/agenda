@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AlignLeft } from "lucide-react"; // Nuevo ícono para la descripción
 import DeleteConfirmModal from "@shared/components/DeleteConfirmModal";
-import { Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import TicketHeader from "./TicketHeader";
 import TicketPeopleCards from "./TicketPeopleCards";
@@ -21,7 +21,7 @@ export default function TicketDetail({
 }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const isCreator = ticket.creatorId === activeUserId;
-
+  const navigate = useNavigate();
   return (
     // Max-w-6xl le da un poco más de aire (Enterprise) frente a 5xl
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in pb-12">
@@ -29,9 +29,7 @@ export default function TicketDetail({
       <TicketHeader
         ticket={ticket}
         isCreator={isCreator}
-        onBack={() => {
-          window.location.href = "/";
-        }}
+        onBack={() => navigate(-1)}
         onStatusChange={onStatusChange}
         onDeleteRequest={() => setIsDeleteModalOpen(true)}
       />

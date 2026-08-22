@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   CheckSquare,
@@ -17,10 +17,12 @@ export default function ProyectosPage({
   events,
   places,
   myProjects,
-  onProjectsChange
+  onProjectsChange,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  useEffect(() => {
+    onProjectsChange();
+  }, [onProjectsChange]);
   const handleCreateProject = async ({
     title,
     description,
@@ -34,12 +36,12 @@ export default function ProyectosPage({
       creatorId: authUser.id,
       members,
     });
-    if(result.success){
+    if (result.success) {
       onProjectsChange();
     }
-
     return result;
   };
+
   return (
     <div className="space-y-12 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">

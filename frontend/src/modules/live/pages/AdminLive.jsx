@@ -9,7 +9,7 @@ import { ServiceStagesConfig } from './ServiceStagesConfig';
 import { TechnicianDevices } from './TechnicianDevices';
 
 export function AdminLive({ authUser, users, onSessionsChange }) {
-  const [activeTab, setActiveTab] = useState('create'); // 'create', 'active', 'history', 'config'
+  const [activeTab, setActiveTab] = useState('create');
 
   const {
     activeSessions,

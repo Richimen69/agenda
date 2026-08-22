@@ -14,30 +14,24 @@ export default function CreateActionModal({
   isOpen,
   onClose,
   projectId,
-  members = [], // Recibimos el equipo asignado al proyecto
+  creatorId,
+  members = [],
   onSuccess,
+  titleMain,
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ESTADO: Tarea
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // ESTADO: KPI
   const [kpiName, setKpiName] = useState("");
   const [kpiType, setKpiType] = useState("ACCUMULABLE");
   const [kpiTarget, setKpiTarget] = useState(100);
   const [kpiUnit, setKpiUnit] = useState("uds");
-
-  // ESTADO: Asignación Múltiple (UX Acordeón)
+  const [isSharedGoal, setIsSharedGoal] = useState(false);
   const [selectedOwners, setSelectedOwners] = useState([]);
   const [expandedAreas, setExpandedAreas] = useState([]);
 
-  // ==========================================
-  // LÓGICA DE AGRUPACIÓN (Cerebro UI)
-  // Agrupamos el arreglo plano de miembros por Área
-  // ==========================================
   const groupedMembers = useMemo(() => {
     const groups = {};
     members.forEach((member) => {
@@ -100,49 +94,96 @@ export default function CreateActionModal({
           endDate,
           ownerId: userId,
           parentId: null,
+          creatorId: creatorId,
+          titleMain: titleMain,
         });
 
         await createKpi(resAction.id, {
           name: kpiName,
           type: kpiType,
+          creatorId: creatorId,
           target: parseFloat(kpiTarget),
           unit: kpiUnit,
+          titleMain: titleMain,
         });
-      }
-
-      else {
-        const parentRes = await createAction(projectId, {
-          title,
-          weight: 1.0,
-          startDate,
-          endDate,
-          ownerId: null,
-          parentId: null,
-        });
-
-        const parentId = parentRes.id;
-
-        const individualTarget = parseFloat(kpiTarget) / selectedOwners.length;
-
-        for (const userId of selectedOwners) {
-          const memberData = members.find((m) => m.user.id === userId);
-          const userName = memberData?.user.name.split(" ")[0] || "Asesor";
-
-          const subtaskRes = await createAction(projectId, {
-            title: `${title} - ${userName}`,
+      } else {
+        if (isSharedGoal) {
+          // Creamos UNA sola tarea y le mandamos 'teamIds'
+          const parentRes = await createAction(projectId, {
+            title,
             weight: 1.0,
             startDate,
             endDate,
-            ownerId: userId,
-            parentId: parentId,
+            ownerId: null, // No hay dueño único, es del equipo
+            parentId: null,
+            teamIds: selectedOwners,
+            creatorId: creatorId,
           });
 
-          await createKpi(subtaskRes.id, {
+          // Le creamos su KPI con la meta total (Ej. 10 zonas)
+          await createKpi(parentRes.id, {
             name: kpiName,
             type: kpiType,
-            target: individualTarget,
+            target: parseFloat(kpiTarget),
             unit: kpiUnit,
+            creatorId: creatorId,
           });
+        } else {
+          // Creamos el Padre (Carpeta)
+          const parentRes = await createAction(projectId, {
+            title,
+            weight: 1.0,
+            startDate,
+            endDate,
+            ownerId: null,
+            parentId: null,
+            creatorId: creatorId,
+          });
+          const parentId = parentRes.id;
+
+          // Matemáticas de división con residuo (Lo que hicimos antes)
+          const totalTarget = parseFloat(kpiTarget);
+          const numOwners = selectedOwners.length;
+          const isInteger = Number.isInteger(totalTarget);
+          let baseTarget = isInteger
+            ? Math.floor(totalTarget / numOwners)
+            : parseFloat((totalTarget / numOwners).toFixed(2));
+          let remainder = isInteger
+            ? totalTarget % numOwners
+            : parseFloat((totalTarget - baseTarget * numOwners).toFixed(2));
+
+          // Fabricamos las subtareas
+          for (let i = 0; i < selectedOwners.length; i++) {
+            const userId = selectedOwners[i];
+            const memberData = members.find((m) => m.user.id === userId);
+            const userName = memberData?.user.name.split(" ")[0] || "Asesor";
+
+            let individualTarget = baseTarget;
+            if (isInteger && remainder > 0) {
+              individualTarget += 1;
+              remainder--;
+            } else if (!isInteger && i === 0 && remainder !== 0) {
+              individualTarget += remainder;
+            }
+
+            const subtaskRes = await createAction(projectId, {
+              title: `${title} - ${userName}`,
+              weight: 1.0,
+              startDate,
+              endDate,
+              ownerId: userId,
+              parentId: parentId,
+              creatorId: creatorId,
+            });
+
+            await createKpi(subtaskRes.id, {
+              name: kpiName,
+              type: kpiType,
+              target: individualTarget,
+              unit: kpiUnit,
+              creatorId: creatorId,
+            });
+          }
         }
       }
       setTitle("");
@@ -177,7 +218,7 @@ export default function CreateActionModal({
           </div>
           <button
             onClick={onClose}
-            className="text-content-muted hover:text-slate-800 p-1.5 rounded-md transition-colors"
+            className="text-content-muted hover:text-slate-800 p-1.5 rounded-md transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -263,7 +304,7 @@ export default function CreateActionModal({
                         <button
                           type="button"
                           onClick={() => toggleAreaCollapse(area.id)}
-                          className="flex items-center gap-2 flex-1 text-left"
+                          className="flex items-center gap-2 flex-1 text-left cursor-pointer"
                         >
                           {isExpanded ? (
                             <ChevronDown className="w-4 h-4 text-content-muted" />
@@ -372,58 +413,113 @@ export default function CreateActionModal({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 1. Comportamiento (Siempre visible) */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Comportamiento
                 </label>
                 <select
                   value={kpiType}
-                  onChange={(e) => setKpiType(e.target.value)}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    setKpiType(type);
+
+                    // Auto-configuramos valores por defecto según el tipo
+                    if (type === "MILESTONE") {
+                      setKpiTarget(1);
+                      setKpiUnit("hito");
+                    } else if (type === "FINANCIAL") {
+                      setKpiUnit("MXN"); // O la moneda de tu país
+                    } else if (type === "STATUS") {
+                      setKpiUnit("%");
+                    }
+                  }}
                   className="w-full bg-white border border-layout-border rounded-md px-3 py-2 text-sm font-medium outline-none"
                 >
-                  <option value="ACCUMULABLE">Suma acumulable (+)</option>
-                  <option value="STATUS">Porcentaje / Estado</option>
+                  <option value="ACCUMULABLE">Suma Acumulable (+)</option>
+                  <option value="STATUS">Porcentaje / Estado (%)</option>
+                  <option value="FINANCIAL">Presupuesto (Financiero)</option>
+                  <option value="MILESTONE">Hito (Entregable Sí/No)</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Meta Numérica {selectedOwners.length > 1 && "(Global)"}
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="0.1"
-                  required
-                  value={kpiTarget}
-                  onChange={(e) => setKpiTarget(e.target.value)}
-                  className="w-full bg-white border border-layout-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-brand outline-none"
-                />
-              </div>
+              {/* 2 y 3. Dinámicos según el tipo de KPI */}
+              {kpiType === "MILESTONE" ? (
+                // Vista para Hitos
+                <div className="col-span-1 md:col-span-2 flex items-center bg-slate-50 border border-layout-border rounded-md px-4 py-2 mt-auto">
+                  <span className="text-sm font-medium text-slate-600">
+                    Esta tarea se reportará con un botón de "Completado". No
+                    requiere configuración numérica.
+                  </span>
+                </div>
+              ) : (
+                // Vista para los demás (Financiero, Acumulable, Estado)
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      {kpiType === "FINANCIAL"
+                        ? `Presupuesto Asignado ${selectedOwners.length > 1 ? "(Global)" : ""}`
+                        : `Meta Numérica ${selectedOwners.length > 1 ? "(Global)" : ""}`}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      required
+                      value={kpiTarget}
+                      onChange={(e) => setKpiTarget(e.target.value)}
+                      className="w-full bg-white border border-layout-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-brand outline-none"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Unidad
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={kpiUnit}
-                  onChange={(e) => setKpiUnit(e.target.value)}
-                  placeholder="Ej. uds, MXN, %"
-                  className="w-full bg-white border border-layout-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-brand outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      {kpiType === "FINANCIAL" ? "Moneda" : "Unidad de medida"}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={kpiUnit}
+                      onChange={(e) => setKpiUnit(e.target.value)}
+                      placeholder={
+                        kpiType === "STATUS" ? "Ej. %" : "Ej. uds, cl"
+                      }
+                      className="w-full bg-white border border-layout-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-brand outline-none"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             <p className="text-xs text-slate-500 mt-2 italic flex items-center gap-1">
-              💡{" "}
               {selectedOwners.length > 1
                 ? `Al seleccionar ${selectedOwners.length} responsables, la meta de ${kpiTarget || 0} se dividirá automáticamente entre ellos.`
                 : `El sistema medirá el avance hasta alcanzar ${kpiTarget || 0} ${kpiUnit}.`}
             </p>
           </section>
+          {selectedOwners.length > 1 && (
+            <div className="col-span-3 mt-2 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="sharedGoal"
+                checked={isSharedGoal}
+                onChange={(e) => setIsSharedGoal(e.target.checked)}
+                className="mt-1 w-4 h-4 text-brand rounded border-slate-300 focus:ring-brand"
+              />
+              <label
+                htmlFor="sharedGoal"
+                className="text-sm text-slate-700 cursor-pointer"
+              >
+                <strong className="block text-brand">
+                  Meta Compartida (Bolsa Grupal)
+                </strong>
+                Si marcas esta opción, la meta de {kpiTarget || 0} no se
+                dividirá. Todo el equipo aportará a una sola métrica (Ej.
+                Recorrer 10 zonas entre todos).
+              </label>
+            </div>
+          )}
         </form>
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-layout-border bg-white">
@@ -431,7 +527,7 @@ export default function CreateActionModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 border border-layout-border rounded-md hover:bg-slate-50"
+            className="px-4 py-2 text-sm font-semibold text-slate-600 border border-layout-border rounded-md hover:bg-slate-50 cursor-pointer"
           >
             Cancelar
           </button>
@@ -439,7 +535,7 @@ export default function CreateActionModal({
             form="create-action-form"
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2 text-sm font-semibold text-white bg-brand rounded-md hover:opacity-90"
+            className="px-5 py-2 text-sm font-semibold text-white bg-brand rounded-md hover:opacity-90 cursor-pointer"
           >
             {isSubmitting ? "Guardando..." : "Crear Tarea y KPI"}
           </button>

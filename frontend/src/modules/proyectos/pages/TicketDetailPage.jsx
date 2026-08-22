@@ -4,6 +4,7 @@ import TicketDetail from "../components/TicketDetail";
 import { deleteTicket } from "../../../services/api";
 import { useTicket } from "../../../hooks/useTicket";
 
+
 export default function TicketDetailPage({ authUser }) {
   const { id } = useParams();
   const navigate = useNavigate();

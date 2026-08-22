@@ -16,14 +16,14 @@ export const triggerRollupAsync = async (kpiId) => {
 
   let newCurrentValue = 0;
 
-  // Evaluamos según el Enum KpiType de tu esquema
-  if (kpi.type === "ACCUMULABLE") {
+  // Lógica de Agrupación por Tipo
+  if (kpi.type === "ACCUMULABLE" || kpi.type === "FINANCIAL") {
     const aggregation = await prisma.kpiRecord.aggregate({
       _sum: { value: true },
       where: { kpiId },
     });
     newCurrentValue = aggregation._sum.value || 0;
-  } else if (kpi.type === "STATUS") {
+  } else if (kpi.type === "STATUS" || kpi.type === "MILESTONE") {
     const lastRecord = await prisma.kpiRecord.findFirst({
       where: { kpiId },
       orderBy: { createdAt: "desc" },
@@ -31,21 +31,15 @@ export const triggerRollupAsync = async (kpiId) => {
     newCurrentValue = lastRecord ? lastRecord.value : 0;
   }
 
-  // Actualizamos el Caché del KPI
   await prisma.kpi.update({
     where: { id: kpiId },
     data: { currentValue: newCurrentValue },
   });
 
-  // Pasamos el relevo a la acción padre (ProjectAction)
   await updateActionProgress(kpi.actionId);
 };
 
-// ==========================================
-// INTERNAL RECURSIVE FUNCTIONS
-// ==========================================
 const updateActionProgress = async (actionId) => {
-  // Ahora también incluimos a los hijos (children)
   const action = await prisma.projectAction.findUnique({
     where: { id: actionId },
     include: { kpis: true, children: true },
@@ -53,32 +47,34 @@ const updateActionProgress = async (actionId) => {
 
   let actionProgress = 0;
 
-  // ESCENARIO A: Es una Subtarea y tiene su propio KPI (Ej. Juan buscando 25 prospectos)
-  if (action.kpis.length > 0) {
+  // 1. Filtramos estrictamente los KPIs operativos (Ignoramos el dinero)
+  const operationalKpis = action.kpis.filter((k) => k.type !== "FINANCIAL");
+
+  if (operationalKpis.length > 0) {
     let sumPercentages = 0;
-    for (const k of action.kpis) {
+    for (const k of operationalKpis) {
       let percentage = (k.currentValue / k.target) * 100;
-      if (percentage > 100) percentage = 100;
+      if (percentage > 100) percentage = 100; // Tope al 100%
       sumPercentages += percentage;
     }
-    actionProgress = sumPercentages / action.kpis.length;
-  }
-  // ESCENARIO B: Es una Tarea Padre sin KPI, promediamos a sus hijos
-  else if (action.children.length > 0) {
+    actionProgress = sumPercentages / operationalKpis.length;
+  } else if (action.children.length > 0) {
+    // Si no tiene KPIs operativos pero tiene hijas, promediamos a las hijas
     let sumChildren = 0;
     for (const child of action.children) {
       sumChildren += child.progress;
     }
     actionProgress = sumChildren / action.children.length;
   }
+  // Si no tiene KPIs operativos ni hijas (Ej. Es puro presupuesto), actionProgress se queda en 0.
 
-  // Guardamos el avance en la base de datos
+  // Guardamos el avance de la acción
   await prisma.projectAction.update({
     where: { id: actionId },
     data: { progress: parseFloat(actionProgress.toFixed(2)) },
   });
 
-  // Burbujeo: Si es subtarea sube al padre, si es raíz sube al proyecto
+  // Burbujeo hacia arriba
   if (action.parentId) {
     await updateActionProgress(action.parentId);
   } else {
@@ -89,15 +85,25 @@ const updateActionProgress = async (actionId) => {
 const updateProjectProgress = async (projectId) => {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    include: { actions: { where: { parentId: null } } },
+    include: {
+      actions: {
+        where: { parentId: null },
+        include: { kpis: true, children: true },
+      },
+    },
   });
 
   let weightedProgress = 0;
   let totalWeight = 0;
 
   for (const act of project.actions) {
-    weightedProgress += act.progress * act.weight;
-    totalWeight += act.weight;
+    const hasOperationalKpi = act.kpis.some((k) => k.type !== "FINANCIAL");
+    const hasChildren = act.children.length > 0;
+
+    if (hasOperationalKpi || hasChildren) {
+      weightedProgress += act.progress * act.weight;
+      totalWeight += act.weight;
+    }
   }
 
   const globalProgress = totalWeight > 0 ? weightedProgress / totalWeight : 0;
@@ -111,7 +117,7 @@ const updateProjectProgress = async (projectId) => {
     where: { id: projectId },
     data: {
       globalProgress: parseFloat(globalProgress.toFixed(2)),
-      health, // GREEN, YELLOW, RED
+      health,
     },
   });
 };

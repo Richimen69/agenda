@@ -5,7 +5,7 @@ export const createProject = async (data) =>
 
 export const getProjects = async () => {
   const json = await fetchJSON(`${API_URL}/projects`);
-  return json.data; 
+  return json.data;
 };
 
 export const getMyProjects = async (userId) => {
@@ -14,18 +14,30 @@ export const getMyProjects = async (userId) => {
 };
 
 export const createAction = async (projectId, data) => {
-  const json = await fetchJSON(`${API_URL}/projects/${projectId}/actions`, 'POST', data);
+  const json = await fetchJSON(
+    `${API_URL}/projects/${projectId}/actions`,
+    "POST",
+    data,
+  );
   return json.data;
 };
 
 export const createKpi = async (actionId, data) => {
-  const json = await fetchJSON(`${API_URL}/kpis/actions/${actionId}/kpis`, 'POST', data);
+  const json = await fetchJSON(
+    `${API_URL}/kpis/actions/${actionId}/kpis`,
+    "POST",
+    data,
+  );
   return json.data;
 };
 
 export const addKpiRecord = async (kpiId, data) => {
-  const json = await fetchJSON(`${API_URL}/kpis/${kpiId}/records`, 'POST', data);
-  return json.data; // Te devuelve el registro y el mensaje de éxito
+  const json = await fetchJSON(
+    `${API_URL}/kpis/${kpiId}/records`,
+    "POST",
+    data,
+  );
+  return json.data;
 };
 
 export const getActionTree = async (projectId) => {
@@ -35,5 +47,27 @@ export const getActionTree = async (projectId) => {
 
 export const getProjectDetails = async (projectId) => {
   const json = await fetchJSON(`${API_URL}/projects/${projectId}`);
-  return json.data; 
+  return json.data;
+};
+
+export const createProjectRatio = async (projectId, data) => {
+  const json = await fetchJSON(
+    `${API_URL}/projects/${projectId}/ratios`,
+    "POST",
+    data,
+  );
+  return json.data;
+};
+export const addProjectComment = async (projectId, data) => {
+  const json = await fetchJSON(
+    `${API_URL}/projects/${projectId}/comments`,
+    "POST",
+    data,
+  );
+  return json.data;
+};
+
+export const getGlobalDashboardData = async () => {
+  const json = await fetchJSON(`${API_URL}/projects/dashboard/global`);
+  return json.data;
 };

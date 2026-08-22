@@ -19,7 +19,7 @@ export const fetchJSON = async (url, method = "GET", body) => {
     if (res.status === 401) {
       localStorage.removeItem("authUser");
       localStorage.removeItem("token");
-      window.location.href = "/login";
+      window.location.href = "/";
     }
     throw { response: { status: res.status, data } };
   }
