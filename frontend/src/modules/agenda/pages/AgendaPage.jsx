@@ -15,9 +15,29 @@ export default function AgendaPage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
 
+  const formatearFechaStr = (fechaString) => {
+    if (!fechaString) return "";
+    const [year, month, day] = fechaString.split("-");
+    const fecha = new Date(year, month - 1, day);
+
+    return fecha.toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  // Obtenemos la fecha de hoy a la medianoche
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
   const eventosAMostrar = diaSeleccionado
-    ? events.filter((e) => e.scheduledAt.startsWith(diaSeleccionado.dateStr))
-    : events;
+    ? events.filter((e) => e.scheduledAt.startsWith(diaSeleccionado.dateStr)) // 1. Muestra los del día seleccionado (pasados o futuros)
+    : events.filter((e) => {
+        // 2. Si no hay día seleccionado, muestra solo de hoy en adelante
+        const fechaEvento = new Date(e.scheduledAt);
+        return fechaEvento >= hoy;
+      });
 
   return (
     <div className="space-y-12 animate-fade-in">
@@ -47,6 +67,11 @@ export default function AgendaPage({
               events={eventosAMostrar}
               userId={authUser.id}
               onUpdated={onEventsChange}
+              titulo={
+                diaSeleccionado
+                  ? `Eventos del ${formatearFechaStr(diaSeleccionado.dateStr)}`
+                  : "Próximos Eventos"
+              }
             />
           </div>
         </div>

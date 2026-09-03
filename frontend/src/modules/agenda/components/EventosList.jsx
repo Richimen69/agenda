@@ -4,7 +4,7 @@ import EditEventModal from "./EditEventModal";
 import { deleteEvent } from "@modules/agenda/services/events.api";
 import { sileo } from "sileo";
 import DeleteConfirmModal from "@shared/components/DeleteConfirmModal";
-export default function EventosList({ events, userId, onUpdated }) {
+export default function EventosList({ events, userId, onUpdated, titulo }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState(false);
   const [deleteModal, setIsDeleteModal] = useState(false);
@@ -43,7 +43,7 @@ export default function EventosList({ events, userId, onUpdated }) {
 
   return (
     <div>
-      <p className="text-content-main font-bold text-xl">Proximos Eventos</p>
+      <p className="text-content-main font-bold text-xl">{titulo}</p>
       <div className="space-y-2 mt-4">
         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
           {events.length === 0 ? (

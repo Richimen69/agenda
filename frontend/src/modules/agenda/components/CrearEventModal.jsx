@@ -86,7 +86,7 @@ const CrearEventModal = ({
           ? `Hola ${user.name}, te has asignado el siguiente evento:`
           : `Hola ${user.name}, ${userCreator} te ha asignado un nuevo evento:`;
 
-      const mensajeWa = `${encabezado}\n\n*${titulo}*\n📅 Fecha: ${fechaFormateada}\n⏰ Hora: ${hora}\n📝 Descripción: ${descripcion}`;
+      const mensajeWa = `${encabezado}\n\n*${titulo}*\n\n📅 Fecha: ${fechaFormateada}\n⏰ Hora: ${hora}\n📝 Descripción: ${descripcion}`;
 
       try {
         await sendWhatsapp(user.whatsappPhone, mensajeWa);

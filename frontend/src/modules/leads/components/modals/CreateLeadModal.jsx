@@ -1,13 +1,21 @@
 import React, { useState } from "react";
 import { X, ArrowRightCircle } from "lucide-react";
 import { checkDuplicatePhones } from "../../services/leads.api";
+const getHoyString = () => {
+  const hoy = new Date();
+  const year = hoy.getFullYear();
+  const month = String(hoy.getMonth() + 1).padStart(2, "0"); // Los meses en JS empiezan en 0
+  const day = String(hoy.getDate()).padStart(2, "0");
 
+  return `${year}-${month}-${day}`;
+};
 const initialForm = {
   fullName: "",
   phone: "",
   source: "",
   department: "NUEVOS",
   interest: "",
+  date: getHoyString(),
 };
 
 export const CreateLeadModal = ({
@@ -40,7 +48,10 @@ export const CreateLeadModal = ({
   if (!isOpen) return null;
 
   const reset = () => {
-    setForm(initialForm);
+    setForm({
+      ...initialForm,
+      date: getHoyString(),
+    });
     setError("");
     setDuplicateWarning(null);
   };
@@ -73,11 +84,12 @@ export const CreateLeadModal = ({
         note: `Reingreso: ${form.interest || "nuevo interés"} vía ${form.source || "sin especificar"}`,
       });
       onClose();
-      if (ok) reset();
+      if (ok) handleClose();
       return;
     }
+    const dateISO = new Date(`${form.date}T12:00:00`).toISOString();
 
-    const ok = await onCreate({ ...form, phone: cleanPhone });
+    const ok = await onCreate({ ...form, phone: cleanPhone, date: dateISO });
     if (ok !== false) reset();
   };
 
@@ -136,6 +148,20 @@ export const CreateLeadModal = ({
                 onChange={(e) => setForm({ ...form, source: e.target.value })}
                 className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand"
                 placeholder="Facebook, referido, walk-in..."
+              />
+            </div>
+          )}
+          {!duplicateWarning && (
+            <div>
+              <label className="text-xs font-medium text-gray-500">
+                Fecha del Lead *
+              </label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand"
+                required
               />
             </div>
           )}
