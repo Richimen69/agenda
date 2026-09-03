@@ -16,6 +16,8 @@ import DashboardPage from "@modules/dashboard/pages/DashboardPage";
 import LeadsPage from "./modules/leads/pages/LeadsPage";
 import { sileo, Toaster } from "sileo";
 import ProjectDetailPage from "./modules/programas/pages/ProjectDetailPage";
+import SupportDashboard from "./modules/support/pages/SupportDashboard";
+import TicketDetail from "./modules/support/pages/TicketDetail";
 
 // NUEVAS IMPORTACIONES DEL MÓDULO LIVE
 import { AdminLive } from "@modules/live/pages/AdminLive";
@@ -206,6 +208,8 @@ export default function App() {
                 />
               }
             />
+            <Route path="/support" element={<SupportDashboard />} />
+            <Route path="/support/ticket/:id" element={<TicketDetail />} />
 
             <Route
               path="admin"

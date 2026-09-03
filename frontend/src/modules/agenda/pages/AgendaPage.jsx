@@ -57,6 +57,7 @@ export default function AgendaPage({
         onClose={() => setIsModalOpen(false)}
         users={users}
         userId={authUser.id}
+        userCreator={authUser.name}
         initialDate={diaSeleccionado?.dateStr}
         onCreated={onEventsChange}
       />

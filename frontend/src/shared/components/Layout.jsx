@@ -11,7 +11,8 @@ import {
   FolderKanban,
   Sheet,
   Menu,
-  X
+  X,
+  TicketCheck,
 } from "lucide-react";
 import ToyotaLogo from "../../../public/toyota.svg";
 
@@ -24,17 +25,16 @@ export default function Layout({ authUser, onLogout }) {
 
   return (
     <div className="flex h-screen bg-layout-app font-sans overflow-hidden">
-      
       {/* OVERLAY PARA MÓVILES */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity"
           onClick={closeMobileMenu}
         />
       )}
 
       {/* NAVEGACIÓN LATERAL (SIDEBAR) */}
-      <aside 
+      <aside
         className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm transform transition-transform duration-300 ease-in-out 
         ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} 
         md:relative md:translate-x-0`}
@@ -55,7 +55,7 @@ export default function Layout({ authUser, onLogout }) {
               Kyojin
             </h1>
           </div>
-          <button 
+          <button
             className="md:hidden text-gray-500 hover:text-gray-900"
             onClick={closeMobileMenu}
           >
@@ -94,7 +94,7 @@ export default function Layout({ authUser, onLogout }) {
           >
             <Calendar className="w-5 h-5" /> Agenda
           </Link>
-          
+
           <Link
             to="/live"
             onClick={closeMobileMenu}
@@ -117,6 +117,14 @@ export default function Layout({ authUser, onLogout }) {
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/leads" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
           >
             <Sheet className="w-5 h-5" /> Leads
+          </Link>
+
+          <Link
+            to="/support"
+            onClick={closeMobileMenu}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/support" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+          >
+            <TicketCheck className="w-5 h-5" /> Soporte
           </Link>
 
           {authUser?.role === "ADMIN" && (
@@ -157,7 +165,6 @@ export default function Layout({ authUser, onLogout }) {
 
       {/* ÁREA DE CONTENIDO PRINCIPAL */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        
         {/* HEADER MÓVIL (Solo visible en pantallas pequeñas) */}
         <header className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200 shadow-sm shrink-0">
           <div className="flex items-center gap-2">
@@ -172,7 +179,7 @@ export default function Layout({ authUser, onLogout }) {
             </div>
             <h1 className="text-lg font-bold text-gray-900">Kyojin</h1>
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileMenuOpen(true)}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >

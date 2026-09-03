@@ -5,11 +5,12 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["prismaSchemaFolder"]
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // 1. USUARIOS
@@ -24,24 +25,28 @@ model User {
   createdAt     DateTime     @default(now())
   moduleRoles   ModuleRole[]
 
-  createdTickets     Ticket[]         @relation("CreatedTickets")
-  assignedTickets    Ticket[]         @relation("AssignedTickets")
-  eventsCreated      Event[]          @relation("EventCreator")
-  eventsAttending    Event[]          @relation("EventAttendees")
-  reminders          Reminder[]
-  auditLogs          AuditLog[]
-  comments           Comment[]
-  subtasks           Subtask[]
-  shortLinks         ShortLink[]
-  createdProjects    Project[]        @relation("ProjectCreator")
-  projectMemberships ProjectMember[]
-  assignedActions    ProjectAction[]  @relation("ActionOwner")
-  kpiRecords         KpiRecord[]
-  projectComments    ProjectComment[]
-  areaId             String?
-  area               Area?            @relation("UserArea", fields: [areaId], references: [id], onDelete: SetNull)
-  advisorSessions    LiveSession[]    @relation("AdvisorSessions")
-  technicianSessions LiveSession[]    @relation("TechnicianSessions")
+  createdTickets         Ticket[]          @relation("CreatedTickets")
+  assignedTickets        Ticket[]          @relation("AssignedTickets")
+  eventsCreated          Event[]           @relation("EventCreator")
+  eventsAttending        Event[]           @relation("EventAttendees")
+  reminders              Reminder[]
+  auditLogs              AuditLog[]
+  comments               Comment[]
+  subtasks               Subtask[]
+  shortLinks             ShortLink[]
+  createdProjects        Project[]         @relation("ProjectCreator")
+  projectMemberships     ProjectMember[]
+  assignedActions        ProjectAction[]   @relation("ActionOwner")
+  kpiRecords             KpiRecord[]
+  projectComments        ProjectComment[]
+  areaId                 String?
+  area                   Area?             @relation("UserArea", fields: [areaId], references: [id], onDelete: SetNull)
+  advisorSessions        LiveSession[]     @relation("AdvisorSessions")
+  technicianSessions     LiveSession[]     @relation("TechnicianSessions")
+  createdSupportTickets  SupportTicket[]   @relation("CreatedSupportTickets")
+  assignedSupportTickets SupportTicket[]   @relation("AssignedSupportTickets")
+  supportComments        SupportComment[]  @relation("UserSupportComments")
+  supportAuditLogs       SupportAuditLog[] @relation("UserSupportAudit")
 }
 
 // 2. TICKETS / PROYECTOS
@@ -95,24 +100,30 @@ model Event {
 
 // 4. RECORDATORIOS (Nuestra Cola Universal para WhatsApp)
 model Reminder {
-  id             String         @id @default(uuid())
-  userId         String
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticketId       String?
-  ticket         Ticket?        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  eventId        String?
-  event          Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  projectId      String?
-  project        Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  actionId       String?
-  action         ProjectAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
-  scheduledAt    DateTime // Cuándo debe enviarse el WhatsApp
-  messagePayload String         @db.Text // El texto exacto a enviar
-  status         ReminderStatus @default(PENDING)
-  retryCount     Int            @default(0)
-  errorLog       String?        @db.Text
-  sentAt         DateTime?
-  createdAt      DateTime       @default(now())
+  id                String         @id @default(uuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketId          String?
+  ticket            Ticket?        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  eventId           String?
+  event             Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  projectId         String?
+  project           Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actionId          String?
+  action            ProjectAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  scheduledAt       DateTime // Cuándo debe enviarse el WhatsApp
+  messagePayload    String         @db.Text // El texto exacto a enviar
+  status            ReminderStatus @default(PENDING)
+  retryCount        Int            @default(0)
+  errorLog          String?        @db.Text
+  sentAt            DateTime?
+  createdAt         DateTime       @default(now())
+  supportTicketId   String?
+  supportTicket     SupportTicket? @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  whatsappMessageId String?        @unique // ID devuelto por Meta al enviar
+  deliveryStatus    String? // 'sent', 'delivered', 'read', 'failed'
+  isTemplate        Boolean        @default(false) // ¿Es plantilla pre-aprobada por Meta?
+  templateName      String? // Nombre de la plantilla (ej: 'ticket_update')
 
   @@index([status, scheduledAt])
 }
@@ -193,10 +204,10 @@ model Project {
   reminders       Reminder[]
   projectComments ProjectComment[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   comments  Comment[]
-  ratios          ProjectRatio[]
+  ratios    ProjectRatio[]
 }
 
 model ProjectMember {
@@ -303,7 +314,6 @@ model LiveSession {
   serviceTypeId String?
   serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
 
-  // RELACIÓN CON LA ETAPA ACTUAL (ID de la tabla ServiceStage)
   currentStageId String?
   currentStage   ServiceStage? @relation("CurrentStage", fields: [currentStageId], references: [id], onDelete: SetNull)
 
@@ -345,13 +355,11 @@ model ServiceStage {
   serviceTypeId String
   serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
 
-  // Sesiones que se encuentran actualmente en esta etapa específica
   currentSessions LiveSession[] @relation("CurrentStage")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Evita que existan dos etapas con el mismo orden en el mismo tipo de servicio
   @@unique([serviceTypeId, order])
 }
 
@@ -361,7 +369,6 @@ model Lead {
   phone    String?
   fullName String
 
-  // OPTIMIZACIÓN 1: Enums en lugar de textos libres para evitar errores de dedo
   department    Department    @default(NUEVOS)
   contactMethod ContactMethod @default(WHATSAPP)
 
@@ -371,7 +378,6 @@ model Lead {
   status       LeadStatus    @default(NUEVO)
   contactState ContactState?
 
-  // OPTIMIZACIÓN 2: Sistema de Recuperación
   needsRecovery  Boolean         @default(false) // Activa la alerta para la chica de recuperación
   recoveryStatus RecoveryStatus? // Estado exacto de la recuperación
   lostReason     String? // Ej. "Su número se encuentra fuera de servicio"
@@ -412,21 +418,109 @@ model LeadComment {
   author    String // Ej. "Asesor" o "Recuperación"
   createdAt DateTime @default(now())
 }
+
 model ProjectRatio {
-  id               String   @id @default(uuid())
-  name             String   // Ej. "Costo por Contratación", "Costo por Prospecto"
-  unit             String   // Ej. "MXN/ud", "USD/cl"
-  
-  projectId        String
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id   String @id @default(uuid())
+  name String // Ej. "Costo por Contratación", "Costo por Prospecto"
+  unit String // Ej. "MXN/ud", "USD/cl"
 
-  numeratorNames   String[]   
-  denominatorNames String[]   
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime @default(now())
+  numeratorNames   String[]
+  denominatorNames String[]
+
+  createdAt DateTime @default(now())
 }
 
-// En el modelo Project agregas: ratios ProjectRatio[]
+model SupportTicket {
+  id          String              @id @default(uuid())
+  folio       Int                 @default(autoincrement())
+  title       String
+  description String?             @db.Text
+  status      SupportTicketStatus @default(ABIERTO)
+  priority    Priority            @default(MEDIA)
+
+  creatorId String
+  creator   User   @relation("CreatedSupportTickets", fields: [creatorId], references: [id])
+
+  assignedTechId String?
+  assignedTech   User?   @relation("AssignedSupportTickets", fields: [assignedTechId], references: [id])
+
+  firstResponseAt      DateTime?
+  resolvedAt           DateTime?
+  closedAt             DateTime?
+  whatsappThreadActive Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments  SupportComment[]
+  auditLogs SupportAuditLog[]
+  reminders Reminder[]
+  attachments SupportAttachment[]
+}
+
+model SupportAttachment {
+  id               String          @id @default(uuid())
+  fileUrl          String          @db.Text // La ruta donde se guardó (ej. AWS S3, Cloudinary o carpeta local)
+  fileName         String          // Ej. "pantalla_azul.jpg"
+  fileType         String          // Ej. "image/jpeg" o "application/pdf"
+  
+  supportTicketId  String?
+  supportTicket    SupportTicket?  @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  
+  supportCommentId String?
+  supportComment   SupportComment? @relation(fields: [supportCommentId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime        @default(now())
+}
+
+model SupportComment {
+  id   String @id @default(uuid())
+  text String @db.Text
+
+  supportTicketId String
+  supportTicket   SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation("UserSupportComments", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // ==========================================
+  // INTEGRACIÓN WHATSAPP WEBHOOK
+  // ==========================================
+  isFromWhatsApp    Boolean @default(false)
+  whatsappMessageId String? @unique
+
+  createdAt DateTime @default(now())
+  attachments SupportAttachment[]
+}
+
+model SupportAuditLog {
+  id              String        @id @default(uuid())
+  supportTicketId String
+  supportTicket   SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation("UserSupportAudit", fields: [userId], references: [id], onDelete: SetNull)
+
+  action  String // Ej: "STATUS_CHANGE", "ASSIGNED"
+  details Json // Ej: { from: "ABIERTO", to: "EN_PROGRESO" }
+
+  // Auditoría de tiempos para la gerencia
+  timeElapsedSeconds Int? // Segundos transcurridos desde el último cambio
+
+  createdAt DateTime @default(now())
+}
+
+enum SupportTicketStatus {
+  ABIERTO
+  EN_PROGRESO
+  ESPERANDO_USUARIO
+  RESUELTO
+  CERRADO
+}
+
 enum CommentType {
   SYSTEM_CREATED
   SYSTEM_REACTIVATED

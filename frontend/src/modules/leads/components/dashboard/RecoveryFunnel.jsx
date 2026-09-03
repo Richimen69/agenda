@@ -24,7 +24,7 @@ export const RecoveryFunnel = ({ data }) => {
           <RefreshCw className="w-3.5 h-3.5 text-white" />
         </div>
         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-          Seguimiento y Recuperación
+          Seguimiento y Recuperación de NUEVOS Y SEMINUEVOS
         </h3>
       </div>
 

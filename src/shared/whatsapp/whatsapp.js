@@ -67,6 +67,76 @@ const inicializarWhatsApp = () => {
 
     scheduleRestart();
   });
+  client.on("message", async (msg) => {
+    try {
+      // 1. Ignorar mensajes de grupos o estados
+      if (msg.from === "status@broadcast" || msg.from.includes("@g.us")) return;
+
+      const phone = msg.from.replace("@c.us", "");
+      const text = msg.body;
+
+      // 3. Buscar si el número pertenece a un usuario registrado
+      const user = await prisma.user.findFirst({
+        where: { whatsappPhone: phone },
+      });
+
+      if (!user) return; // Si no es un usuario del sistema, ignoramos
+
+      // 4. Buscar si el usuario tiene un ticket de soporte ACTIVO
+      const activeTicket = await prisma.supportTicket.findFirst({
+        where: {
+          creatorId: user.id,
+          status: { in: ["ABIERTO", "EN_PROGRESO", "ESPERANDO_USUARIO"] },
+          whatsappThreadActive: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (activeTicket) {
+        console.log(
+          `[WhatsApp] Mensaje recibido de ${user.name} para el Ticket #${activeTicket.folio}`,
+        );
+
+        // 5. Guardar el mensaje como un comentario en el ticket
+        await prisma.$transaction(async (tx) => {
+          await tx.supportComment.create({
+            data: {
+              text: text,
+              supportTicketId: activeTicket.id,
+              authorId: user.id,
+              isFromWhatsApp: true,
+              whatsappMessageId: msg.id.id, // Guardamos el ID del mensaje para evitar duplicados
+            },
+          });
+
+          // 6. Si el técnico estaba esperando respuesta, regresamos el ticket a EN_PROGRESO
+          if (activeTicket.status === "ESPERANDO_USUARIO") {
+            await tx.supportTicket.update({
+              where: { id: activeTicket.id },
+              data: { status: "EN_PROGRESO" },
+            });
+
+            await tx.supportAuditLog.create({
+              data: {
+                supportTicketId: activeTicket.id,
+                action: "STATUS_CHANGE",
+                details: {
+                  from: "ESPERANDO_USUARIO",
+                  to: "EN_PROGRESO",
+                  reason: "Usuario respondió por WA",
+                },
+              },
+            });
+          }
+        });
+
+        // Opcional: Reaccionar al mensaje de WhatsApp para que el usuario sepa que lo recibimos
+        await msg.react("✅");
+      }
+    } catch (error) {
+      console.error("[WhatsApp] Error procesando mensaje entrante:", error);
+    }
+  });
 
   // FIX PRINCIPAL: capturar el error de initialize() para que no tumbe
   // el proceso completo. Antes esto no tenía .catch() y por eso el

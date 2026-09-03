@@ -22,6 +22,7 @@ import areaRoutes from "./modules/admin/area.routes.js";
 import serviceTypeRoutes from "./modules/live/service-type.routes.js";
 import liveSessionRoutes from "./modules/live/live-session.routes.js";
 import leadsRoutes from "./modules/leads/leads.routes.js";
+import supportRoutes from "./modules/support/support.routes.js"
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,8 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/kpis", kpiRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/leads", leadsRoutes);
+app.use("/api/support", supportRoutes);
+
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);

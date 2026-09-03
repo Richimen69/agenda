@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Check, CircleAlert, Search } from "lucide-react";
 import { createEvent } from "@modules/agenda/services/events.api";
 import { sileo } from "sileo";
+import { sendWhatsapp } from "@services/whatsapp.api";
 
 const normalizar = (texto = "") =>
   texto
@@ -16,6 +17,7 @@ const CrearEventModal = ({
   userId,
   initialDate,
   onCreated,
+  userCreator,
 }) => {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(initialDate || "");
@@ -53,8 +55,49 @@ const CrearEventModal = ({
 
   const handleAssigneeChange = (id) => {
     setAssigneeIds((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
     );
+  };
+  const formatearFecha = (fechaString) => {
+    if (!fechaString) return "";
+    // Separamos "YYYY-MM-DD" para evitar problemas de zona horaria
+    const [year, month, day] = fechaString.split("-");
+    const fecha = new Date(year, month - 1, day);
+
+    return fecha.toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const enviarNotificacionesWhatsApp = async (
+    usuarios,
+    titulo,
+    fechaFormateada,
+    hora,
+    descripcion,
+    userId,
+  ) => {
+    for (const user of usuarios) {
+      // Definimos el saludo dependiendo de si es el mismo usuario o alguien más
+      const encabezado =
+        user.id === userId
+          ? `Hola ${user.name}, te has asignado el siguiente evento:`
+          : `Hola ${user.name}, ${userCreator} te ha asignado un nuevo evento:`;
+
+      const mensajeWa = `${encabezado}\n\n*${titulo}*\n📅 Fecha: ${fechaFormateada}\n⏰ Hora: ${hora}\n📝 Descripción: ${descripcion}`;
+
+      try {
+        await sendWhatsapp(user.whatsappPhone, mensajeWa);
+      } catch (error) {
+        console.error(`Error al enviar WhatsApp a ${user.name}:`, error);
+      }
+
+      // Genera un retraso aleatorio entre 3000ms (3s) y 6000ms (6s)
+      const tiempoRetraso = Math.floor(Math.random() * 3000) + 3000;
+      await new Promise((resolve) => setTimeout(resolve, tiempoRetraso));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -63,7 +106,7 @@ const CrearEventModal = ({
 
     if (!date || !time) {
       alert("Por favor selecciona fecha y hora");
-      return; // todavía no se ha puesto isSubmitting en true, así que no se cuelga
+      return;
     }
 
     setIsSubmitting(true);
@@ -78,6 +121,21 @@ const CrearEventModal = ({
       });
 
       if (result.success) {
+        const fechaFormateada = formatearFecha(date);
+
+        const usuariosAsignados = users.filter(
+          (user) =>
+            assigneeIds.includes(user.id) &&
+            user.id !== userId &&
+            user.whatsappPhone,
+        );
+        enviarNotificacionesWhatsApp(
+          usuariosAsignados,
+          title,
+          fechaFormateada,
+          time,
+          description,
+        );
         sileo.success({
           title: "Evento Registrado",
           description: `${title} Registrado correctamente`,
@@ -107,9 +165,10 @@ const CrearEventModal = ({
       setIsSubmitting(false);
     }
   };
-
   const usersFiltrados = userSearch.trim()
-    ? users.filter((user) => normalizar(user.name).includes(normalizar(userSearch)))
+    ? users.filter((user) =>
+        normalizar(user.name).includes(normalizar(userSearch)),
+      )
     : users;
 
   return (
@@ -239,7 +298,9 @@ const CrearEventModal = ({
                           <span
                             className={`text-sm ${isSelected ? "font-semibold text-content-main" : "text-content-muted"}`}
                           >
-                            {userId === user.id ? `${user.name} (Tú)` : user.name}
+                            {userId === user.id
+                              ? `${user.name} (Tú)`
+                              : user.name}
                           </span>
                         </div>
                         <div
