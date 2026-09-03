@@ -455,25 +455,25 @@ model SupportTicket {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  comments  SupportComment[]
-  auditLogs SupportAuditLog[]
-  reminders Reminder[]
+  comments    SupportComment[]
+  auditLogs   SupportAuditLog[]
+  reminders   Reminder[]
   attachments SupportAttachment[]
 }
 
 model SupportAttachment {
-  id               String          @id @default(uuid())
-  fileUrl          String          @db.Text // La ruta donde se guardó (ej. AWS S3, Cloudinary o carpeta local)
-  fileName         String          // Ej. "pantalla_azul.jpg"
-  fileType         String          // Ej. "image/jpeg" o "application/pdf"
-  
-  supportTicketId  String?
-  supportTicket    SupportTicket?  @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
-  
+  id       String @id @default(uuid())
+  fileUrl  String @db.Text // La ruta donde se guardó (ej. AWS S3, Cloudinary o carpeta local)
+  fileName String // Ej. "pantalla_azul.jpg"
+  fileType String // Ej. "image/jpeg" o "application/pdf"
+
+  supportTicketId String?
+  supportTicket   SupportTicket? @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+
   supportCommentId String?
   supportComment   SupportComment? @relation(fields: [supportCommentId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime        @default(now())
+  createdAt DateTime @default(now())
 }
 
 model SupportComment {
@@ -492,7 +492,7 @@ model SupportComment {
   isFromWhatsApp    Boolean @default(false)
   whatsappMessageId String? @unique
 
-  createdAt DateTime @default(now())
+  createdAt   DateTime            @default(now())
   attachments SupportAttachment[]
 }
 
@@ -533,6 +533,9 @@ enum ModuleRole {
   LEADS_AUX
   LEADS_RESPONSABLE
   LIVE_ADMIN
+  MARKETING
+  LEADS
+  CELULA
 }
 
 enum Department {

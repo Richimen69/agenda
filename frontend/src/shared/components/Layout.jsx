@@ -22,6 +22,15 @@ export default function Layout({ authUser, onLogout }) {
 
   // Función para cerrar el menú en móviles al hacer clic en un enlace
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const roles = authUser?.moduleRoles || [];
+  const isAdmin = authUser?.role === "ADMIN";
+
+  // 1. Verificamos accesos específicos
+  const canViewDashboard = isAdmin || roles.includes("CELULA");
+  const canViewMarketing = isAdmin || roles.includes("MARKETING");
+  const canViewLive = isAdmin || roles.includes("LIVE_ADMIN");
+  // Para leads damos acceso si tiene cualquier rol relacionado a LEADS
+  const canViewLeads = isAdmin || roles.some((rol) => rol.startsWith("LEADS"));
 
   return (
     <div className="flex h-screen bg-layout-app font-sans overflow-hidden">
@@ -65,13 +74,16 @@ export default function Layout({ authUser, onLogout }) {
 
         {/* Links de Navegación */}
         <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">
-          <Link
-            to="/"
-            onClick={closeMobileMenu}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/" || location.pathname.startsWith("/dashboard") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
-          >
-            <ChartBar className="w-5 h-5" /> Dashboard
-          </Link>
+          {canViewDashboard && (
+            <Link
+              to="/"
+              onClick={closeMobileMenu}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/" || location.pathname.startsWith("/dashboard") ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              <ChartBar className="w-5 h-5" /> Dashboard
+            </Link>
+          )}
+
           <Link
             to="/proyectos"
             onClick={closeMobileMenu}
@@ -79,7 +91,6 @@ export default function Layout({ authUser, onLogout }) {
           >
             <FolderKanban className="w-5 h-5" /> Proyectos
           </Link>
-
           <Link
             to="/tareas"
             onClick={closeMobileMenu}
@@ -95,29 +106,35 @@ export default function Layout({ authUser, onLogout }) {
             <Calendar className="w-5 h-5" /> Agenda
           </Link>
 
-          <Link
-            to="/live"
-            onClick={closeMobileMenu}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/live" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
-          >
-            <Radio className="w-5 h-5" /> Live
-          </Link>
+          {canViewLive && (
+            <Link
+              to="/live"
+              onClick={closeMobileMenu}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/live" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+            >
+              <Radio className="w-5 h-5" /> Live
+            </Link>
+          )}
 
-          <Link
-            to="/marketing"
-            onClick={closeMobileMenu}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/marketing" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
-          >
-            <Link2 className="w-5 h-5" /> Marketing
-          </Link>
+          {canViewMarketing && (
+            <Link
+              to="/marketing"
+              onClick={closeMobileMenu}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/marketing" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+            >
+              <Link2 className="w-5 h-5" /> Marketing
+            </Link>
+          )}
 
-          <Link
-            to="/leads"
-            onClick={closeMobileMenu}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/leads" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
-          >
-            <Sheet className="w-5 h-5" /> Leads
-          </Link>
+          {canViewLeads && (
+            <Link
+              to="/leads"
+              onClick={closeMobileMenu}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/leads" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
+            >
+              <Sheet className="w-5 h-5" /> Leads
+            </Link>
+          )}
 
           <Link
             to="/support"
@@ -127,7 +144,7 @@ export default function Layout({ authUser, onLogout }) {
             <TicketCheck className="w-5 h-5" /> Soporte
           </Link>
 
-          {authUser?.role === "ADMIN" && (
+          {isAdmin && (
             <Link
               to="/admin"
               onClick={closeMobileMenu}
