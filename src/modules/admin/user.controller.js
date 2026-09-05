@@ -220,3 +220,104 @@ export const editUser = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// 5. CAMBIAR CONTRASEÑA (Usuario autenticado)
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user?.id; // Proviene del middleware de autenticación (JWT)
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: "Debes proporcionar la contraseña actual y la nueva",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: "La nueva contraseña debe tener al menos 6 caracteres",
+      });
+    }
+
+    // Obtenemos el usuario con su hash actual
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "Usuario no encontrado" });
+    }
+
+    // Validar contraseña actual
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: "La contraseña actual es incorrecta",
+      });
+    }
+
+    // Hashear y actualizar la nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    res.json({ success: true, message: "Contraseña actualizada exitosamente" });
+  } catch (error) {
+    console.error("Error al cambiar contraseña:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, id, newPassword } = req.body;
+
+    if ((!email && !id) || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: "Debes proporcionar el email (o id) y la nueva contraseña",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: "La contraseña debe tener al menos 6 caracteres",
+      });
+    }
+
+    // Buscar al usuario por email o id
+    const user = await prisma.user.findUnique({
+      where: email ? { email } : { id },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Usuario no encontrado",
+      });
+    }
+
+    // Hashear la nueva contraseña y guardarla
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    res.json({
+      success: true,
+      message: "Contraseña actualizada correctamente",
+    });
+  } catch (error) {
+    console.error("Error al resetear contraseña:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
