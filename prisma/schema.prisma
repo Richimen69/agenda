@@ -536,6 +536,7 @@ enum ModuleRole {
   MARKETING
   LEADS
   CELULA
+  DIRECCION
 }
 
 enum Department {

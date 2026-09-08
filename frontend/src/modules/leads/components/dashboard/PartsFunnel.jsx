@@ -2,52 +2,32 @@ const STAGES = [
   {
     key: "leads",
     label: "Leads",
-    width: "w-full",
+    width: "w-full", // 100%
     clip: "[clip-path:polygon(0_0,100%_0,95%_100%,5%_100%)]",
-    bar: "bg-[#7C3AED]",
-    dot: "bg-[#7C3AED]",
-    text: "text-[#7C3AED]",
-    soft: "bg-[#7C3AED]/10",
+    bar: "bg-[#0284C7]", // Azul (Confianza y seguridad)
+    dot: "bg-[#0284C7]",
+    text: "text-[#0369A1]",
+    soft: "bg-[#0284C7]/10",
   },
   {
-    key: "contactados",
-    label: "Asignados",
-    width: "w-[90%]",
-    clip: "[clip-path:polygon(0_0,100%_0,94%_100%,6%_100%)]",
-    bar: "bg-[#1D4ED8]",
-    dot: "bg-[#1D4ED8]",
-    text: "text-[#1D4ED8]",
-    soft: "bg-[#1D4ED8]/10",
-  },
-  {
-    key: "citas",
-    label: "Citas",
-    width: "w-[79%]",
+    key: "cotizacion",
+    label: "Cotizaciones",
+    width: "w-[77%]", // Ajuste simétrico para mantener la diagonal recta
     clip: "[clip-path:polygon(0_0,100%_0,93%_100%,7%_100%)]",
-    bar: "bg-[#0EA5E9]",
-    dot: "bg-[#0EA5E9]",
-    text: "text-[#0284C7]",
-    soft: "bg-[#0EA5E9]/10",
-  },
-  {
-    key: "shows",
-    label: "Shows",
-    width: "w-[67%]",
-    clip: "[clip-path:polygon(0_0,100%_0,92%_100%,8%_100%)]",
-    bar: "bg-[#84CC16]",
-    dot: "bg-[#84CC16]",
-    text: "text-[#65A30D]",
-    soft: "bg-[#84CC16]/10",
+    bar: "bg-[#334155]", // Gris Grafito (Formalidad, números y experiencia premium)
+    dot: "bg-[#334155]",
+    text: "text-[#1E293B]",
+    soft: "bg-[#334155]/10",
   },
   {
     key: "ventas",
     label: "Ventas",
-    width: "w-[55%]",
+    width: "w-[55%]", // 55% 
     clip: "[clip-path:polygon(0_0,100%_0,91%_100%,9%_100%)]",
-    bar: "bg-[#16A34A]",
-    dot: "bg-[#16A34A]",
-    text: "text-[#15803D]",
-    soft: "bg-[#16A34A]/10",
+    bar: "bg-[#EB0A1E]", // Rojo Toyota (Decisión, urgencia y cierre)
+    dot: "bg-[#EB0A1E]",
+    text: "text-[#B91C1C]",
+    soft: "bg-[#EB0A1E]/10",
   },
 ];
 
@@ -56,7 +36,7 @@ const format = (n) => new Intl.NumberFormat("es-MX").format(n);
 const rate = (part, whole) =>
   whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0;
 
-export function DigitalFunnel({
+export function PartsFunnel({
   data,
   title = "Autos Nuevos",
   subtitle = "mes en curso",
@@ -147,4 +127,4 @@ export function DigitalFunnel({
   );
 }
 
-export default DigitalFunnel;
+export default PartsFunnel;

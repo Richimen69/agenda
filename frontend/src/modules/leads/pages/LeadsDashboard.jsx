@@ -20,6 +20,8 @@ import { RecoveryFunnel } from "../components/dashboard/RecoveryFunnel";
 import { DigitalFunnel } from "../components/dashboard/DigitalFunnel";
 import { CardAmount } from "../components/dashboard/CardAmount";
 import { CombinedFunnelChart } from "../components/dashboard/CombinedFunnelChart";
+import { ServiceFunnel } from "../components/dashboard/ServiceFunnel";
+import { PartsFunnel } from "../components/dashboard/PartsFunnel";
 
 const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -76,6 +78,7 @@ export const LeadsDashboard = () => {
       .catch((err) => console.error("Error cargando dashboard:", err))
       .finally(() => setLoading(false));
   }, [month]);
+  console.log(nuevosFunnel);
 
   return (
     <div className="min-h-screen p-4 lg:p-8 font-sans">
@@ -112,14 +115,14 @@ export const LeadsDashboard = () => {
           </div>
           <div className="col-span-2 grid lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
             <RecoveryFunnel data={funnel} />
+            <ServiceFunnel data={servicioFunnel} title="Servicio" />
+            <PartsFunnel data={refaccionesFunnel} title="Refacciones" />
+          </div>
+          <div className="col-span-2 grid lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
             <DigitalFunnel data={nuevosFunnel} title="Autos Nuevos" />
             <DigitalFunnel data={seminuevosFunnel} title="Seminuevos" />
+            <DigitalFunnel data={digitalFunnel} title="Digital" />
           </div>
-          <CombinedFunnelChart
-            digitalData={digitalFunnel}
-            servicioData={servicioFunnel}
-            refaccionesData={refaccionesFunnel}
-          />
         </div>
       )}
     </div>

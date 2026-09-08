@@ -56,23 +56,10 @@ export const RecoveryFunnel = ({ data }) => {
                 <span className="text-sm text-gray-600 leading-tight">{step.label}</span>
               </div>
 
-              {/* Badge, solo en las filas que lo tienen */}
-              {step.badge && (
-                <div className="hidden sm:flex items-center gap-1 shrink-0">
-                  <span className="text-gray-300">›</span>
-                  <div className="border border-brand/30 text-brand text-[11px] font-semibold rounded-full px-3 py-1.5 text-center leading-tight whitespace-nowrap">
-                    {step.badge}
-                  </div>
-                </div>
-              )}
+
             </div>
           );
         })}
-      </div>
-
-      <div className="flex items-center gap-2 bg-red-50 text-brand text-xs rounded-lg px-3 py-2.5 mt-4">
-        <Info className="w-4 h-4 shrink-0" />
-        Las recuperaciones dependen del interés del cliente.
       </div>
     </div>
   );

@@ -216,18 +216,44 @@ export const getDigitalFunnel = async (req, res) => {
       date: { gte: startDate, lt: endDate },
     };
 
-    const [leads, contactados, citas, shows, ventas] = await Promise.all([
+    // Agregamos la consulta de aggregate al Promise.all
+    const [
+      leads,
+      contactados,
+      citas,
+      shows,
+      cotizacion,
+      ventas,
+      ventasAmountResult,
+    ] = await Promise.all([
       prisma.lead.count({ where: baseWhere }),
-      prisma.lead.count({ where: { ...baseWhere, status: { not: "NUEVO" } } }),
+      prisma.lead.count({
+        where: {
+          ...baseWhere,
+          assignment: {
+            not: null,
+            not: "",
+          },
+        },
+      }),
       prisma.lead.count({ where: { ...baseWhere, hasAppointment: true } }),
       prisma.lead.count({ where: { ...baseWhere, showedUp: true } }),
+      prisma.lead.count({ where: { ...baseWhere, hasQuote: true } }),
       prisma.lead.count({
+        where: { ...baseWhere, amount: { not: null, gt: 0 } },
+      }),
+      // Nueva consulta para sumar el amount
+      prisma.lead.aggregate({
+        _sum: { amount: true },
         where: { ...baseWhere, amount: { not: null, gt: 0 } },
       }),
     ]);
 
     const calcPercent = (value) =>
       leads > 0 ? +((value / leads) * 100).toFixed(0) : 0;
+
+    // Extraemos la suma asegurándonos de devolver 0 si es null
+    const totalAmount = ventasAmountResult._sum.amount || 0;
 
     res.json({
       success: true,
@@ -237,7 +263,9 @@ export const getDigitalFunnel = async (req, res) => {
         contactados,
         citas,
         shows,
-        ventas, // Ya se calcula dinámicamente
+        cotizacion,
+        ventas,
+        totalAmount,
         contactadosPercent: calcPercent(contactados),
         citasPercent: calcPercent(citas),
         showsPercent: calcPercent(shows),
