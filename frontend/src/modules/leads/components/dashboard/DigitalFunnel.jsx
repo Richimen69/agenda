@@ -80,14 +80,6 @@ export function DigitalFunnel({
             {subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
-          <span className="tabular-nums text-gray-900 font-bold md:text-2xl text-xl">
-            {data.totalAmount.toLocaleString("es-MX", {
-              style: "currency",
-              currency: "MXN",
-            })}
-          </span>
-        </div>
       </header>
 
       <ol className="mt-6 flex flex-col items-center">
