@@ -81,17 +81,39 @@ export const addTicketComment = async (req, res) => {
 
 export const createSupportTicket = async (req, res) => {
   try {
-    // Recibimos los datos y los archivos (previamente subidos con Multer)
-    const { title, description, creatorId } = req.body;
-    const files = req.files; // Array de archivos adjuntos
+    // 1. Recibimos los nuevos campos GLPI
+    const {
+      title,
+      description,
+      creatorId,
+      categoryId,
+      caseType,
+      source,
+      createdAt,
+    } = req.body;
+    const files = req.files;
 
     const newTicket = await prisma.$transaction(async (tx) => {
+      let assignedTechId = null;
+      if (categoryId) {
+        const category = await tx.supportCategory.findUnique({
+          where: { id: categoryId },
+        });
+        if (category && category.defaultTechId)
+          assignedTechId = category.defaultTechId;
+      }
+
       const ticket = await tx.supportTicket.create({
         data: {
           title,
           description,
           creatorId,
+          categoryId,
+          caseType: caseType || "INCIDENTE",
+          source: source || "PORTAL",
+          assignedTechId,
           status: "ABIERTO",
+          createdAt: createdAt ? new Date(createdAt) : undefined,
           attachments: {
             create:
               files?.map((f) => ({
@@ -101,36 +123,58 @@ export const createSupportTicket = async (req, res) => {
               })) || [],
           },
         },
-        include: { creator: true },
+        include: { creator: true, assignedTech: true },
       });
 
-      const itPhoneNumber = process.env.IT_SUPPORT_WHATSAPP_NUMBER;
-
-      await tx.reminder.create({
+      // 4. Auditoría
+      await tx.supportAuditLog.create({
         data: {
-          userId: creatorId, // Solo por referencia
           supportTicketId: ticket.id,
-          scheduledAt: new Date(),
-          messagePayload: `🚨 *NUEVO TICKET DE SOPORTE*\n👤 *Usuario:* ${ticket.creator.name}\n🎫 *Folio:* #${ticket.folio}\n📌 *Asunto:* ${ticket.title}\n\nEntra al sistema para revisarlo.`,
-          status: "PENDING",
+          userId: creatorId,
+          action: "TICKET_CREATED",
+          details: { status: "ABIERTO", autoAssignedTo: assignedTechId },
+          timeElapsedSeconds: 0,
         },
       });
+
+      // 5. Notificación por WhatsApp (Ping-Pong)
+      // Si se auto-asignó, le avisamos directo a ese técnico. Si no, al grupo general.
+      const targetPhone =
+        ticket.assignedTech?.whatsappPhone ||
+        process.env.IT_SUPPORT_WHATSAPP_NUMBER;
+
+      if (targetPhone) {
+        await tx.reminder.create({
+          data: {
+            userId: creatorId,
+            supportTicketId: ticket.id,
+            scheduledAt: new Date(),
+            messagePayload: `🚨 *NUEVO TICKET*\n👤 *Usuario:* ${ticket.creator.name}\n🎫 *Folio:* #${ticket.folio}\n📌 *Asunto:* ${ticket.title}\n\nEntra al sistema para revisarlo.`,
+            status: "PENDING",
+          },
+        });
+      }
 
       return ticket;
     });
 
     res.status(201).json({ success: true, data: newTicket });
   } catch (error) {
+    console.error("[Helpdesk] Error creando ticket:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
-// ==========================================
-// 2. ACTUALIZAR ESTADO Y CALCULAR SLA
-// ==========================================
+
 export const updateTicketStatus = async (req, res) => {
   try {
-    const { ticketId } = req.params;
-    const { newStatus, techId } = req.body; // techId es el ID del técnico haciendo el cambio
+    const { id: ticketId } = req.params;
+    if (!ticketId) {
+      return res
+        .status(400)
+        .json({ error: "Falta el ID del ticket en la URL" });
+    }
+
+    const { newStatus, techId } = req.body;
 
     const ticket = await prisma.supportTicket.findUnique({
       where: { id: ticketId },
@@ -206,23 +250,23 @@ export const getTickets = async (req, res) => {
   try {
     const { userId, role } = req.query;
 
-    // Lógica de permisos: 
+    // Lógica de permisos:
     // Si es USER, solo ve los suyos. Si es TECH/ADMIN, ve todos.
-    const whereClause = role === 'USER' ? { creatorId: userId } : {};
+    const whereClause = role === "USER" ? { creatorId: userId } : {};
 
     const tickets = await prisma.supportTicket.findMany({
       where: whereClause,
       include: {
         creator: {
-          select: { id: true, name: true, email: true } // No enviamos el password al front
+          select: { id: true, name: true, email: true }, // No enviamos el password al front
         },
         assignedTech: {
-          select: { id: true, name: true }
-        }
+          select: { id: true, name: true },
+        },
       },
       orderBy: {
-        createdAt: 'desc' // Los más recientes primero
-      }
+        createdAt: "desc", // Los más recientes primero
+      },
     });
 
     res.status(200).json({ success: true, data: tickets });
@@ -240,32 +284,34 @@ export const getTicketById = async (req, res) => {
       where: { id },
       include: {
         creator: {
-          select: { id: true, name: true, whatsappPhone: true }
+          select: { id: true, name: true, whatsappPhone: true },
         },
         assignedTech: {
-          select: { id: true, name: true }
+          select: { id: true, name: true },
         },
         // Traemos los archivos adjuntos originales del ticket
-        attachments: true, 
+        attachments: true,
         // Traemos el historial de chat ordenado cronológicamente
         comments: {
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: "asc" },
           include: {
             author: {
-              select: { id: true, name: true, role: true }
+              select: { id: true, name: true, role: true },
             },
-            attachments: true // Archivos adjuntos en cada comentario
-          }
+            attachments: true, // Archivos adjuntos en cada comentario
+          },
         },
         // Opcional: Traemos la auditoría para ver los tiempos de SLA
         auditLogs: {
-          orderBy: { createdAt: 'asc' }
-        }
-      }
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!ticket) {
-      return res.status(404).json({ success: false, error: "Ticket no encontrado" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Ticket no encontrado" });
     }
 
     res.status(200).json({ success: true, data: ticket });
@@ -274,4 +320,171 @@ export const getTicketById = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+export const getSupportCategories = async (req, res) => {
+  try {
+    const categories = await prisma.supportCategory.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" }, // Ordenadas alfabéticamente
+    });
+    res.status(200).json({ success: true, data: categories });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 
+export const getAllCategoriesAdmin = async (req, res) => {
+  try {
+    const categories = await prisma.supportCategory.findMany({
+      include: {
+        defaultTech: { select: { id: true, name: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+    res.status(200).json({ success: true, data: categories });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const createCategory = async (req, res) => {
+  try {
+    // Agregamos parentId
+    const { name, description, defaultTechId, parentId } = req.body;
+    const category = await prisma.supportCategory.create({
+      data: {
+        name,
+        description,
+        defaultTechId: defaultTechId || null,
+        parentId: parentId || null, // Guardamos el padre
+      },
+    });
+    res.status(201).json({ success: true, data: category });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const updateCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, defaultTechId, isActive, parentId } = req.body;
+
+    const category = await prisma.supportCategory.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        defaultTechId: defaultTechId || null,
+        isActive,
+        parentId: parentId || null, // Actualizamos el padre
+      },
+    });
+    res.status(200).json({ success: true, data: category });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getTechUsers = async (req, res) => {
+  try {
+    const techs = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN"] }, isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+    res.status(200).json({ success: true, data: techs });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getSupportMetrics = async (req, res) => {
+  try {
+    // Traemos todos los tickets para procesarlos en memoria (Rápido y compatible con cualquier BD)
+    const tickets = await prisma.supportTicket.findMany({
+      include: {
+        category: {
+          select: { name: true, parent: { select: { name: true } } },
+        },
+        creator: { select: { name: true } },
+      },
+    });
+
+    // 1. KPIs (Columna Izquierda)
+    const kpis = {
+      total: tickets.length,
+      assigned: tickets.filter((t) => t.assignedTechId !== null).length,
+      closed: tickets.filter((t) => t.status === "CERRADO").length,
+      pending: tickets.filter((t) =>
+        ["ABIERTO", "ESPERANDO_USUARIO"].includes(t.status),
+      ).length,
+      problems: tickets.filter((t) => t.status === "EN_PROGRESO").length, // Simulando "Problemas"
+    };
+
+    // 2. Agrupación por Meses (Para Gráfico de Área y Barras Apiladas)
+    const monthsMap = {};
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }).reverse();
+
+    last6Months.forEach((m) => {
+      monthsMap[m] = { month: m, opened: 0, solved: 0, closed: 0, pending: 0 };
+    });
+
+    tickets.forEach((t) => {
+      const month = `${t.createdAt.getFullYear()}-${String(t.createdAt.getMonth() + 1).padStart(2, "0")}`;
+      if (monthsMap[month]) {
+        monthsMap[month].opened += 1;
+        if (t.status === "RESUELTO") monthsMap[month].solved += 1;
+        if (t.status === "CERRADO") monthsMap[month].closed += 1;
+        if (["ABIERTO", "EN_PROGRESO", "ESPERANDO_USUARIO"].includes(t.status))
+          monthsMap[month].pending += 1;
+      }
+    });
+    const monthlyData = Object.values(monthsMap);
+
+    // 3. Principales Categorías (Gráfico Horizontal)
+    const catMap = {};
+    tickets.forEach((t) => {
+      let catName = t.category?.name || "Sin Categoría";
+      if (t.category?.parent)
+        catName = `${t.category.parent.name} > ${catName}`;
+      catMap[catName] = (catMap[catName] || 0) + 1;
+    });
+    const topCategories = Object.keys(catMap)
+      .map((name) => ({ name, count: catMap[name] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5
+
+    // 4. Fuentes de Solicitud (Gráfico Vertical)
+    const sourceMap = {};
+    tickets.forEach((t) => {
+      const source = t.source || "PORTAL";
+      sourceMap[source] = (sourceMap[source] || 0) + 1;
+    });
+    const topSources = Object.keys(sourceMap).map((name) => ({
+      name,
+      count: sourceMap[name],
+    }));
+
+    // 5. Principales Solicitantes (Gráfico Horizontal)
+    const reqMap = {};
+    tickets.forEach((t) => {
+      const reqName = t.creator?.name || "Desconocido";
+      reqMap[reqName] = (reqMap[reqName] || 0) + 1;
+    });
+    const topRequesters = Object.keys(reqMap)
+      .map((name) => ({ name, count: reqMap[name] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5
+
+    res.status(200).json({
+      success: true,
+      data: { kpis, monthlyData, topCategories, topSources, topRequesters },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

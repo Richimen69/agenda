@@ -23,6 +23,8 @@ import TicketDetail from "./modules/support/pages/TicketDetail";
 import { AdminLive } from "@modules/live/pages/AdminLive";
 import { LiveRoom } from "@modules/live/components/LiveRoom";
 import { TechnicianKiosk } from "@modules/live/pages/TechnicianKiosk";
+import SupportCategories from "@modules/support/pages/SupportCategories";
+import SupportMetrics from "@modules/support/components/SupportMetrics";
 
 export default function App() {
   const { authUser, setAuthUser, isCheckingAuth, handleLogout } = useAuth();
@@ -171,6 +173,8 @@ export default function App() {
                 />
               }
             />
+            <Route path="/support/metrics" element={<SupportMetrics authUser={authUser}/>} />
+            <Route path="/support/categories" element={<SupportCategories />} />
             <Route
               path="leads"
               element={
@@ -208,8 +212,8 @@ export default function App() {
                 />
               }
             />
-            <Route path="/support" element={<SupportDashboard />} />
-            <Route path="/support/ticket/:id" element={<TicketDetail />} />
+            <Route path="/support" element={<SupportDashboard authUser={authUser} users={users}/>} />
+            <Route path="/support/ticket/:id" element={<TicketDetail authUser={authUser}/>} />
 
             <Route
               path="admin"

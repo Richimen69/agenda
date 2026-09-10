@@ -13,12 +13,19 @@ import {
   Menu,
   X,
   TicketCheck,
+  ChevronDown,
+  ChevronRight, // Nuevos iconos para el submenú
 } from "lucide-react";
 import ToyotaLogo from "../../../public/toyota.svg";
 
 export default function Layout({ authUser, onLogout }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Estado para controlar el menú desplegable de Soporte
+  const [isSupportMenuOpen, setIsSupportMenuOpen] = useState(
+    location.pathname.startsWith("/support"), // Se abre automáticamente si ya estás en una ruta de soporte
+  );
 
   // Función para cerrar el menú en móviles al hacer clic en un enlace
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
@@ -136,13 +143,57 @@ export default function Layout({ authUser, onLogout }) {
             </Link>
           )}
 
-          <Link
-            to="/support"
-            onClick={closeMobileMenu}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${location.pathname === "/support" ? "bg-layout-hover text-content-main shadow-sm" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}
-          >
-            <TicketCheck className="w-5 h-5" /> Soporte
-          </Link>
+          {/* SOPORTE Y SUBMENÚS */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setIsSupportMenuOpen(!isSupportMenuOpen)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all ${
+                location.pathname.startsWith("/support")
+                  ? "bg-layout-hover text-content-main shadow-sm"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <TicketCheck className="w-5 h-5" /> Soporte
+              </div>
+              {isSupportMenuOpen ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Menú Desplegable */}
+            {isSupportMenuOpen && (
+              <div className="flex flex-col gap-1 pl-11 pr-2 py-1">
+                {canViewDashboard && (
+                  <Link
+                    to="/support/metrics"
+                    onClick={closeMobileMenu}
+                    className={`block px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                      location.pathname === "/support" ||
+                      location.pathname === "/support/dashboard"
+                        ? "text-content-main bg-gray-100"
+                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                <Link
+                  to="/support"
+                  onClick={closeMobileMenu}
+                  className={`block px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                    location.pathname === "/support/tickets"
+                      ? "text-content-main bg-gray-100"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  Tickets
+                </Link>
+              </div>
+            )}
+          </div>
 
           {isAdmin && (
             <Link

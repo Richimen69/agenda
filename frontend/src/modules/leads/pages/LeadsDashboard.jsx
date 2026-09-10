@@ -106,12 +106,6 @@ export const LeadsDashboard = () => {
               loading={loading}
               type="count"
             />
-            <CardAmount
-              title="Monto generado por Servicio"
-              amount={generatedAmount}
-              loading={loading}
-              type="amount"
-            />
           </div>
           <div className="col-span-2 grid lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
             <RecoveryFunnel data={funnel} />

@@ -47,6 +47,7 @@ model User {
   assignedSupportTickets SupportTicket[]   @relation("AssignedSupportTickets")
   supportComments        SupportComment[]  @relation("UserSupportComments")
   supportAuditLogs       SupportAuditLog[] @relation("UserSupportAudit")
+  defaultCategories      SupportCategory[] @relation("CategoryDefaultTech")
 }
 
 // 2. TICKETS / PROYECTOS
@@ -441,8 +442,14 @@ model SupportTicket {
   status      SupportTicketStatus @default(ABIERTO)
   priority    Priority            @default(MEDIA)
 
+  caseType String @default("INCIDENTE")
+  source   String @default("PORTAL")
+
   creatorId String
   creator   User   @relation("CreatedSupportTickets", fields: [creatorId], references: [id])
+
+  categoryId String?
+  category   SupportCategory? @relation(fields: [categoryId], references: [id])
 
   assignedTechId String?
   assignedTech   User?   @relation("AssignedSupportTickets", fields: [assignedTechId], references: [id])
@@ -464,8 +471,8 @@ model SupportTicket {
 model SupportAttachment {
   id       String @id @default(uuid())
   fileUrl  String @db.Text // La ruta donde se guardó (ej. AWS S3, Cloudinary o carpeta local)
-  fileName String // Ej. "pantalla_azul.jpg"
-  fileType String // Ej. "image/jpeg" o "application/pdf"
+  fileName String
+  fileType String
 
   supportTicketId String?
   supportTicket   SupportTicket? @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
@@ -474,6 +481,25 @@ model SupportAttachment {
   supportComment   SupportComment? @relation(fields: [supportCommentId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
+
+model SupportCategory {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean @default(true) // Para ocultar categorías viejas sin borrarlas
+
+  defaultTechId String?
+  defaultTech   User?   @relation("CategoryDefaultTech", fields: [defaultTechId], references: [id], onDelete: SetNull)
+
+  parentId String?
+  parent   SupportCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children SupportCategory[] @relation("CategoryHierarchy")
+  // Relación con los tickets
+  tickets  SupportTicket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SupportComment {
@@ -486,9 +512,6 @@ model SupportComment {
   authorId String
   author   User   @relation("UserSupportComments", fields: [authorId], references: [id], onDelete: Cascade)
 
-  // ==========================================
-  // INTEGRACIÓN WHATSAPP WEBHOOK
-  // ==========================================
   isFromWhatsApp    Boolean @default(false)
   whatsappMessageId String? @unique
 
@@ -504,8 +527,8 @@ model SupportAuditLog {
   userId String?
   user   User?   @relation("UserSupportAudit", fields: [userId], references: [id], onDelete: SetNull)
 
-  action  String // Ej: "STATUS_CHANGE", "ASSIGNED"
-  details Json // Ej: { from: "ABIERTO", to: "EN_PROGRESO" }
+  action  String
+  details Json
 
   // Auditoría de tiempos para la gerencia
   timeElapsedSeconds Int? // Segundos transcurridos desde el último cambio

@@ -5,10 +5,23 @@ import {
   updateTicketStatus,
   getTickets,
   getTicketById,
+  getAllCategoriesAdmin,
+  createCategory,
+  updateCategory,
+  getTechUsers,
+  getSupportCategories,
+  getSupportMetrics
 } from "./support.controller.js";
 import { uploadMiddleware } from "../../middlewares/upload.js";
 
 const router = Router();
+router.get("/admin/categories", getAllCategoriesAdmin);
+router.get("/categories", getSupportCategories);
+router.get("/metrics", getSupportMetrics);
+
+router.post("/admin/categories", createCategory);
+router.patch("/admin/categories/:id", updateCategory);
+router.get("/admin/techs", getTechUsers);
 router.get("/tickets", getTickets);
 router.get("/tickets/:id", getTicketById);
 router.post(
