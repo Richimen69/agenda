@@ -6,12 +6,14 @@ import {
 } from "../services/supportService";
 import TicketChat from "../components/TicketChat";
 import CommentInput from "../components/CommentInput";
+import ImageModal from "../components/ImageModal";
 
 export default function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const currentUser = JSON.parse(localStorage.getItem("authUser")) || {
     id: "1",
@@ -81,7 +83,6 @@ export default function TicketDetail() {
             ← Volver a la lista
           </button>
         </div>
-
         {/* TARJETA DE INFORMACIÓN DEL TICKET */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex justify-between items-start mb-6 pb-6 border-b border-gray-100">
@@ -166,8 +167,49 @@ export default function TicketDetail() {
               {ticket.description}
             </div>
           </div>
-        </div>
 
+          {/* MUEVE ESTE BLOQUE ADENTRO DE LA TARJETA BLANCA */}
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-400 uppercase mb-3">
+                Archivos Adjuntos Iniciales
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {ticket.attachments.map((file) =>
+                  file.fileType.includes("image") ? (
+                    <div
+                      key={file.id}
+                      onClick={() => setSelectedImage(file.fileUrl)}
+                      className="cursor-zoom-in relative group"
+                    >
+                      <img
+                        src={file.fileUrl}
+                        alt={file.fileName}
+                        className="w-full h-24 object-cover rounded border border-gray-300 group-hover:opacity-80 transition"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                        <span className="bg-black/60 text-white p-1 rounded-full text-xs">
+                          🔍
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <a
+                      key={file.id}
+                      href={file.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center p-2 bg-gray-50 border border-gray-200 text-indigo-600 rounded text-xs truncate hover:bg-gray-100 transition"
+                    >
+                      📎 {file.fileName}
+                    </a>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+        </div>{" "}
+        {/* <--- AQUÍ SE CIERRA LA TARJETA BLANCA */}
         {/* ZONA DE CHAT Y COMENTARIOS */}
         <div className="mb-6">
           <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
@@ -178,7 +220,6 @@ export default function TicketDetail() {
             currentUserRole={currentUser.role}
           />
         </div>
-
         {/* INPUT DE RESPUESTA */}
         {ticket.status !== "CERRADO" && (
           <CommentInput
@@ -188,6 +229,14 @@ export default function TicketDetail() {
           />
         )}
       </div>
+
+      {/* ¡AQUÍ ESTÁ LA MAGIA QUE FALTABA! RENDERIZAR EL MODAL */}
+      {selectedImage && (
+        <ImageModal
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
     </div>
   );
 }

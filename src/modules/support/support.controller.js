@@ -81,7 +81,6 @@ export const addTicketComment = async (req, res) => {
 
 export const createSupportTicket = async (req, res) => {
   try {
-    // 1. Recibimos los nuevos campos GLPI
     const {
       title,
       description,
@@ -93,6 +92,31 @@ export const createSupportTicket = async (req, res) => {
     } = req.body;
     const files = req.files;
 
+    // Validación de seguridad
+    if (!creatorId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El solicitante es obligatorio." });
+    }
+
+    // 1. SUBIR ARCHIVOS A CLOUDFLARE R2 PRIMERO
+    const attachmentsData = [];
+    if (files && files.length > 0) {
+      const uploadPromises = files.map(async (file) => {
+        const fileUrl = await uploadFileToR2(file); // Subimos a la nube
+        return {
+          fileUrl, // Ahora sí tenemos la URL real
+          fileName: file.originalname,
+          fileType: file.mimetype,
+        };
+      });
+
+      // Esperamos a que todas las imágenes se suban
+      const uploadedFiles = await Promise.all(uploadPromises);
+      attachmentsData.push(...uploadedFiles);
+    }
+
+    // 2. CREAR EL TICKET EN LA BASE DE DATOS
     const newTicket = await prisma.$transaction(async (tx) => {
       let assignedTechId = null;
       if (categoryId) {
@@ -114,19 +138,16 @@ export const createSupportTicket = async (req, res) => {
           assignedTechId,
           status: "ABIERTO",
           createdAt: createdAt ? new Date(createdAt) : undefined,
+
+          // Usamos el arreglo de archivos que ya subimos a R2
           attachments: {
-            create:
-              files?.map((f) => ({
-                fileUrl: f.path,
-                fileName: f.originalname,
-                fileType: f.mimetype,
-              })) || [],
+            create: attachmentsData,
           },
         },
         include: { creator: true, assignedTech: true },
       });
 
-      // 4. Auditoría
+      // Auditoría
       await tx.supportAuditLog.create({
         data: {
           supportTicketId: ticket.id,
@@ -137,12 +158,10 @@ export const createSupportTicket = async (req, res) => {
         },
       });
 
-      // 5. Notificación por WhatsApp (Ping-Pong)
-      // Si se auto-asignó, le avisamos directo a ese técnico. Si no, al grupo general.
+      // Notificación WhatsApp
       const targetPhone =
         ticket.assignedTech?.whatsappPhone ||
         process.env.IT_SUPPORT_WHATSAPP_NUMBER;
-
       if (targetPhone) {
         await tx.reminder.create({
           data: {
@@ -258,9 +277,12 @@ export const getTickets = async (req, res) => {
       where: whereClause,
       include: {
         creator: {
-          select: { id: true, name: true, email: true }, // No enviamos el password al front
+          select: { id: true, name: true, email: true },
         },
         assignedTech: {
+          select: { id: true, name: true },
+        },
+        category: {
           select: { id: true, name: true },
         },
       },
@@ -304,6 +326,9 @@ export const getTicketById = async (req, res) => {
         // Opcional: Traemos la auditoría para ver los tiempos de SLA
         auditLogs: {
           orderBy: { createdAt: "asc" },
+        },
+        category: {
+          select: { id: true, name: true },
         },
       },
     });

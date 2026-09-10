@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function TicketList({ tickets, loading, onNewTicket }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-
+  console.log("Tickets in TicketList:", tickets);
   const filteredTickets = tickets.filter(t => 
     t.folio.toString().includes(searchQuery) || 
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

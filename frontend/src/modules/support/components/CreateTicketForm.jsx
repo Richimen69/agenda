@@ -17,7 +17,6 @@ const normalizar = (texto = "") =>
 
 export default function CreateTicketForm({
   categories,
-  currentUser,
   onCancel,
   onSuccess,
   users,
@@ -89,6 +88,11 @@ export default function CreateTicketForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    if (!selectedUserId) {
+      alert("Por favor, selecciona un solicitante de la lista.");
+      return;
+    }
+    setIsSubmitting(true);
     const formData = new FormData(e.target);
 
     const ticketData = {
@@ -97,7 +101,7 @@ export default function CreateTicketForm({
       caseType: formData.get("caseType"),
       categoryId: formData.get("categoryId"),
       source: formData.get("source"),
-      creatorId: currentUser.id,
+      creatorId: selectedUserId,
       createdAt: formData.get("createdAt"),
     };
 
@@ -128,7 +132,7 @@ export default function CreateTicketForm({
             Crear Nueva Incidencia
           </h1>
           <p className="text-xs font-semibold text-brand uppercase tracking-wider mt-1">
-            Soporte IT <span className="text-gray-400 mx-1">•</span> Módulo de
+            Soporte IT <span className="text-gray-400 mx-1">•</span>
             Casos <span className="text-gray-400 mx-1">•</span> Nuevo Ticket
           </p>
         </div>
@@ -161,7 +165,7 @@ export default function CreateTicketForm({
               name="createdAt"
               required
               defaultValue={todayWithTime}
-              className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none"
             />
           </div>
           <div>
