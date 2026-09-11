@@ -60,6 +60,7 @@ export const addTicketComment = async (req, res) => {
     }
 
     // 4. Encolar el WhatsApp
+    /*
     if (targetPhone) {
       await prisma.reminder.create({
         data: {
@@ -67,10 +68,11 @@ export const addTicketComment = async (req, res) => {
           supportTicketId: ticketId,
           scheduledAt: new Date(),
           messagePayload: message,
-          status: "PENDING",
-        },
+          status: 'PENDING'
+        }
       });
     }
+    */
 
     res.status(201).json({ success: true, data: newComment });
   } catch (error) {
@@ -159,9 +161,8 @@ export const createSupportTicket = async (req, res) => {
       });
 
       // Notificación WhatsApp
-      const targetPhone =
-        ticket.assignedTech?.whatsappPhone ||
-        process.env.IT_SUPPORT_WHATSAPP_NUMBER;
+      /*
+      const targetPhone = ticket.assignedTech?.whatsappPhone || process.env.IT_SUPPORT_WHATSAPP_NUMBER;
       if (targetPhone) {
         await tx.reminder.create({
           data: {
@@ -169,10 +170,11 @@ export const createSupportTicket = async (req, res) => {
             supportTicketId: ticket.id,
             scheduledAt: new Date(),
             messagePayload: `🚨 *NUEVO TICKET*\n👤 *Usuario:* ${ticket.creator.name}\n🎫 *Folio:* #${ticket.folio}\n📌 *Asunto:* ${ticket.title}\n\nEntra al sistema para revisarlo.`,
-            status: "PENDING",
-          },
+            status: 'PENDING'
+          }
         });
       }
+      */
 
       return ticket;
     });
@@ -217,14 +219,6 @@ export const updateTicketStatus = async (req, res) => {
     let updateData = { status: newStatus, assignedTechId: techId };
     let whatsappMessage = "";
 
-    if (newStatus === "EN_PROGRESO" && !ticket.firstResponseAt) {
-      updateData.firstResponseAt = now; // Se marca el SLA de primera respuesta
-      whatsappMessage = `*Soporte TI - Folio #${ticket.folio}*\nTu ticket está siendo atendido por uno de nuestros técnicos. 👨‍💻`;
-    } else if (newStatus === "RESUELTO") {
-      updateData.resolvedAt = now; // Inicia el reloj de 48h para cierre
-      whatsappMessage = `*Soporte TI - Folio #${ticket.folio}*\nTu ticket ha sido marcado como *RESUELTO* ✅.\n\nSi el problema persiste, por favor responde a este mensaje. Si no hay respuesta, el ticket se cerrará automáticamente en 48 horas.`;
-    }
-
     // 3. Actualizar Ticket y crear Auditoría en Transacción
     const updatedTicket = await prisma.$transaction(async (tx) => {
       const updated = await tx.supportTicket.update({
@@ -246,6 +240,7 @@ export const updateTicketStatus = async (req, res) => {
     });
 
     // 4. Encolar notificación de WhatsApp si aplica
+    /*
     if (whatsappMessage) {
       await prisma.reminder.create({
         data: {
@@ -253,10 +248,11 @@ export const updateTicketStatus = async (req, res) => {
           supportTicketId: ticket.id,
           scheduledAt: now,
           messagePayload: whatsappMessage,
-          status: "PENDING",
-        },
+          status: 'PENDING'
+        }
       });
     }
+    */
 
     res.status(200).json({ success: true, data: updatedTicket });
   } catch (error) {
