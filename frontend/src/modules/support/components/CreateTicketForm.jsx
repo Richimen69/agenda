@@ -227,6 +227,7 @@ export default function CreateTicketForm({
             >
               <option value="PORTAL">Portal Web</option>
               <option value="PRESENCIAL">Presencial</option>
+              <option value="TELEFONO">Telefono</option>
               <option value="WHATSAPP">WhatsApp</option>
             </select>
           </div>

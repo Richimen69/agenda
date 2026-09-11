@@ -443,7 +443,7 @@ model SupportTicket {
   priority    Priority            @default(MEDIA)
 
   caseType String @default("INCIDENTE")
-  source   String @default("PORTAL")
+  source   String @default("WHATSAPP")
 
   creatorId String
   creator   User   @relation("CreatedSupportTickets", fields: [creatorId], references: [id])
