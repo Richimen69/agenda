@@ -181,10 +181,18 @@ model ShortLink {
   userId String // Ajustado a String para poder relacionarse con User.id
   user   User   @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  clickHistory ShortLinkClick[]
 
   @@index([shortCode])
+}
+
+model ShortLinkClick {
+  id          String    @id @default(uuid())
+  shortLinkId String
+  shortLink   ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
 }
 
 model Project {

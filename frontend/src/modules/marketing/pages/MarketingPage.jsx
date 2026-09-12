@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import CreateShortLinkForm from "../components/CreateShortLinkForm";
 import ShortLinkList from "../components/ShortLinkList";
-import { getLinks, getStats } from "@modules/marketing/services//shortlinks.api";
+import {
+  getLinks,
+  getStats,
+} from "@modules/marketing/services//shortlinks.api";
 import MarketingDashboard from "../components/MarketingDashboard";
 
 export default function MarketingPage({ authUser }) {
   const [links, setLinks] = useState([]);
-  const [stats, setStats] = useState(null); // Nuevo estado para KPIs
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -33,9 +36,7 @@ export default function MarketingPage({ authUser }) {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Marketing
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketing</h1>
         <p className="text-gray-500">
           Gestiona y mide tus enlaces cortos corporativos desde un solo lugar.
         </p>

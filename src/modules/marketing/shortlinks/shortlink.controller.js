@@ -1,10 +1,11 @@
-import prisma from '#config/prisma';
-import crypto from 'crypto';
+import prisma from "#config/prisma";
+import crypto from "crypto";
 
 // Helper para generar códigos aleatorios (Base62)
 const generateShortCode = (length = 6) => {
-  const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let result = '';
+  const chars =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars[crypto.randomInt(0, chars.length)];
   }
@@ -16,7 +17,9 @@ export const getLinkStats = async (req, res) => {
     const totalLinks = await prisma.shortLink.count();
 
     // 2. Suma de todos los clics
-    const sumClicks = await prisma.shortLink.aggregate({ _sum: { clicks: true } });
+    const sumClicks = await prisma.shortLink.aggregate({
+      _sum: { clicks: true },
+    });
     const totalClicks = sumClicks._sum.clicks || 0;
 
     // 3. Enlaces "muertos" (0 clics)
@@ -25,13 +28,14 @@ export const getLinkStats = async (req, res) => {
     // 4. Top 5 Enlaces más exitosos
     const topLinks = await prisma.shortLink.findMany({
       where: { clicks: { gt: 0 } },
-      orderBy: { clicks: 'desc' },
+      orderBy: { clicks: "desc" },
       take: 5,
-      include: { user: { select: { name: true } } }
+      include: { user: { select: { name: true } } },
     });
 
     // Calcular promedio
-    const avgClicks = totalLinks > 0 ? (totalClicks / totalLinks).toFixed(1) : 0;
+    const avgClicks =
+      totalLinks > 0 ? (totalClicks / totalLinks).toFixed(1) : 0;
 
     res.json({
       success: true,
@@ -40,8 +44,8 @@ export const getLinkStats = async (req, res) => {
         totalClicks,
         unusedLinks,
         avgClicks,
-        topLinks
-      }
+        topLinks,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -54,21 +58,39 @@ export const createLink = async (req, res) => {
     // AHORA RECIBIMOS userId DESDE EL FRONTEND
     const { originalUrl, shortCode, userId } = req.body;
 
-    if (!originalUrl) return res.status(400).json({ success: false, error: 'La URL original es requerida' });
-    if (!userId) return res.status(400).json({ success: false, error: 'Falta el ID del usuario' });
+    if (!originalUrl)
+      return res
+        .status(400)
+        .json({ success: false, error: "La URL original es requerida" });
+    if (!userId)
+      return res
+        .status(400)
+        .json({ success: false, error: "Falta el ID del usuario" });
 
     // Asegurar que la URL tenga http/https
-    const formattedUrl = /^https?:\/\//i.test(originalUrl) ? originalUrl : `https://${originalUrl}`;
+    const formattedUrl = /^https?:\/\//i.test(originalUrl)
+      ? originalUrl
+      : `https://${originalUrl}`;
     let finalShortCode = shortCode;
 
     if (finalShortCode) {
-      const exists = await prisma.shortLink.findUnique({ where: { shortCode: finalShortCode } });
-      if (exists) return res.status(409).json({ success: false, error: 'El alias personalizado ya está en uso' });
+      const exists = await prisma.shortLink.findUnique({
+        where: { shortCode: finalShortCode },
+      });
+      if (exists)
+        return res
+          .status(409)
+          .json({
+            success: false,
+            error: "El alias personalizado ya está en uso",
+          });
     } else {
       let isUnique = false;
       while (!isUnique) {
         finalShortCode = generateShortCode();
-        const exists = await prisma.shortLink.findUnique({ where: { shortCode: finalShortCode } });
+        const exists = await prisma.shortLink.findUnique({
+          where: { shortCode: finalShortCode },
+        });
         if (!exists) isUnique = true;
       }
     }
@@ -91,10 +113,10 @@ export const createLink = async (req, res) => {
 export const getLinks = async (req, res) => {
   try {
     const links = await prisma.shortLink.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { name: true } } // Traemos el nombre del creador
-      }
+        user: { select: { name: true } }, // Traemos el nombre del creador
+      },
     });
     res.json({ success: true, data: links });
   } catch (error) {
@@ -108,14 +130,22 @@ export const redirectLink = async (req, res) => {
     const { shortCode } = req.params;
 
     const link = await prisma.shortLink.findUnique({ where: { shortCode } });
-    if (!link) return res.status(404).json({ success: false, error: 'Enlace no encontrado' });
+    if (!link)
+      return res
+        .status(404)
+        .json({ success: false, error: "Enlace no encontrado" });
+    prisma.shortLinkClick
+      .create({
+        data: { shortLinkId: link.id },
+      })
+      .catch((err) => console.error("Error guardando historial de clic:", err));
 
-    // Sumar 1 clic
     await prisma.shortLink.update({
       where: { id: link.id },
       data: { clicks: { increment: 1 } },
     });
 
+    // 3. Redirección
     res.redirect(301, link.originalUrl);
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -126,27 +156,58 @@ export const deleteLink = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.shortLink.delete({
-      where: { 
-        id: id 
-      }
+      where: {
+        id: id,
+      },
     });
-    return res.status(200).json({ 
-      success: true, 
-      message: "Enlace eliminado correctamente." 
+    return res.status(200).json({
+      success: true,
+      message: "Enlace eliminado correctamente.",
     });
-
   } catch (error) {
     console.error("Error al eliminar el shortlink:", error);
-    
-    if (error.code === 'P2025') {
-      return res.status(404).json({ 
-        success: false, 
-        error: "El enlace no existe o ya fue eliminado." 
+
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        error: "El enlace no existe o ya fue eliminado.",
       });
     }
-    return res.status(500).json({ 
-      success: false, 
-      error: "Error interno al eliminar el enlace." 
+    return res.status(500).json({
+      success: false,
+      error: "Error interno al eliminar el enlace.",
     });
+  }
+};
+
+export const getMonthlyStats = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const year = new Date().getFullYear(); 
+
+    // Usamos shortLinkClick
+    const clicks = await prisma.shortLinkClick.findMany({
+      where: {
+        shortLinkId: id, // El campo relacional de tu schema
+        createdAt: {
+          gte: new Date(`${year}-01-01T00:00:00.000Z`),
+          lte: new Date(`${year}-12-31T23:59:59.999Z`),
+        },
+      },
+      select: { createdAt: true }, 
+    });
+
+    const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const monthlyData = meses.map(mes => ({ name: mes, clicks: 0 }));
+
+    clicks.forEach((click) => {
+      const mesIndex = click.createdAt.getMonth(); 
+      monthlyData[mesIndex].clicks += 1;
+    });
+
+    return res.status(200).json({ success: true, data: monthlyData });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, error: "Error obteniendo métricas" });
   }
 };

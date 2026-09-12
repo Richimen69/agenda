@@ -14,3 +14,8 @@ export const createLink = async (data) => {
   const json = await fetchJSON(`${API_URL}/links`, 'POST', data);
   return json.data;
 };
+
+export const getLinkStats = async (id) => {
+  const response = await fetchJSON(`${API_URL}/links/${id}/stats`);
+  return response.data; 
+};

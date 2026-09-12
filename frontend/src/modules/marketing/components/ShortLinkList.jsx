@@ -1,8 +1,9 @@
-import { useState } from 'react';
-
+import { useState } from "react";
+import { Copy, ExternalLink, Trash2, TrendingUp } from "lucide-react";
+import LinkStatsModal from "./LinkStatsModal";
 export default function ShortLinkList({ links }) {
   const [copiedId, setCopiedId] = useState(null);
-
+  const [selectedLinkForStats, setSelectedLinkForStats] = useState(null);
   // Helper para construir la URL corta pública basado en el entorno actual
   const buildShortUrl = (shortCode) => {
     return `${window.location.origin}/s/${shortCode}`;
@@ -17,7 +18,11 @@ export default function ShortLinkList({ links }) {
   };
 
   if (!links || links.length === 0) {
-    return <div className="text-center text-gray-500 py-10">No hay enlaces generados aún.</div>;
+    return (
+      <div className="text-center text-gray-500 py-10">
+        No hay enlaces generados aún.
+      </div>
+    );
   }
 
   return (
@@ -36,7 +41,11 @@ export default function ShortLinkList({ links }) {
           {links.map((link) => (
             <tr key={link.id} className="hover:bg-gray-50 transition">
               <td className="p-4 font-medium text-blue-600 truncate max-w-xs">
-                <a href={buildShortUrl(link.shortCode)} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={buildShortUrl(link.shortCode)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   /{link.shortCode}
                 </a>
               </td>
@@ -49,26 +58,41 @@ export default function ShortLinkList({ links }) {
                 </span>
               </td>
               <td className="p-4 text-gray-500">
-                {new Date(link.createdAt).toLocaleDateString('es-ES', {
-                  year: 'numeric', month: 'short', day: 'numeric'
+                {new Date(link.createdAt).toLocaleDateString("es-ES", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
                 })}
               </td>
               <td className="p-4 text-center">
                 <button
+                  onClick={() => setSelectedLinkForStats(link)}
+                  className="text-gray-400 hover:text-blue-600 mx-2 transition-colors"
+                  title="Ver métricas"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleCopy(link.shortCode, link.id)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
                     copiedId === link.id
-                      ? 'bg-green-100 text-green-700 border border-green-200'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-transparent'
+                      ? "bg-green-100 text-green-700 border border-green-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-transparent"
                   }`}
                 >
-                  {copiedId === link.id ? '¡Copiado!' : 'Copiar'}
+                  {copiedId === link.id ? "¡Copiado!" : "Copiar"}
                 </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {selectedLinkForStats && (
+        <LinkStatsModal
+          link={selectedLinkForStats}
+          onClose={() => setSelectedLinkForStats(null)}
+        />
+      )}
     </div>
   );
 }
