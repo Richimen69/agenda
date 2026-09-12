@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+// Importamos el icono de gráficas (BarChart2) y el de descarga
+import { Download, BarChart2 } from 'lucide-react'; 
 
 export default function TicketList({ tickets, loading, onNewTicket }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // NUEVO: Estado para controlar la vista actual
   const [viewMode, setViewMode] = useState('DEFAULT');
 
-  // Obtenemos el mes y año actual para el filtro
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  // Lógica combinada de Búsqueda + Filtro de Vista
   const filteredTickets = tickets.filter(t => {
-    // 1. Filtro de texto (Buscador)
     const matchesSearch = 
       t.folio.toString().includes(searchQuery) || 
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -23,21 +20,56 @@ export default function TicketList({ tickets, loading, onNewTicket }) {
     
     if (!matchesSearch) return false;
 
-    // 2. Filtro de Vista (Dropdown)
     if (viewMode === 'DEFAULT') {
-      // Lo que pediste: Diferente a cerrado Y solo del mes actual
       const ticketDate = new Date(t.createdAt);
       const isCurrentMonth = ticketDate.getMonth() === currentMonth && ticketDate.getFullYear() === currentYear;
       return t.status !== 'CERRADO' && isCurrentMonth;
     } 
     else if (viewMode === 'OPEN_ALL') {
-      // Seguridad: Todos los que no estén cerrados (sin importar el mes)
       return t.status !== 'CERRADO';
     }
-    
-    // Si viewMode es 'ALL', mostramos todo (Histórico GLPI)
     return true;
   });
+
+  // ==========================================
+  // EXPORTAR A EXCEL (Con Descripción Segura)
+  // ==========================================
+  const exportToCSV = () => {
+    // 1. Agregamos 'Descripción' a las cabeceras
+    const headers = ['Folio', 'Estado', 'Título', 'Descripción', 'Tipo', 'Categoría', 'Solicitante', 'Técnico Asignado', 'Fecha de Apertura'];
+
+    const rows = filteredTickets.map(t => {
+      // 2. Limpiamos la descripción: quitamos comillas dobles y cambiamos los "Enters" por espacios
+      const cleanDescription = t.description 
+        ? t.description.replace(/"/g, '""').replace(/[\r\n]+/g, ' ') 
+        : 'Sin descripción';
+
+      return [
+        t.folio,
+        t.status,
+        `"${t.title.replace(/"/g, '""')}"`, 
+        `"${cleanDescription}"`, // <-- AQUÍ INSERTAMOS LA DESCRIPCIÓN LIMPIA
+        t.caseType || 'Incidente',
+        `"${t.category?.name || 'N/A'}"`,
+        `"${t.creator?.name || 'N/A'}"`,
+        `"${t.assignedTech?.name || 'Sin asignar'}"`,
+        new Date(t.createdAt).toLocaleDateString('es-MX')
+      ].join(',');
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(','), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    const todayStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Reporte_Tickets_${todayStr}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -49,12 +81,38 @@ export default function TicketList({ tickets, loading, onNewTicket }) {
             Soporte IT <span className="text-gray-400 mx-1">•</span>Casos
           </p>
         </div>
-        <button 
-          onClick={onNewTicket}
-          className="px-6 py-2 bg-brand hover:bg-brand-hover text-white text-sm font-bold rounded-md shadow-sm transition flex items-center gap-2"
-        >
-          <span>+</span> Nuevo Ticket
-        </button>
+        
+        {/* BOTONES DE ACCIÓN */}
+        <div className="flex gap-3">
+          
+          {/* NUEVO BOTÓN: Ver Métricas (Dashboard) */}
+          <button 
+            onClick={() => navigate('/support/metrics')}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-bold rounded-md shadow-sm transition flex items-center gap-2"
+            title="Ver Dashboard Analítico"
+          >
+            <BarChart2 size={16} className="text-brand" />
+            Métricas
+          </button>
+
+          {/* BOTÓN DE EXPORTAR */}
+          <button 
+            onClick={exportToCSV}
+            disabled={filteredTickets.length === 0}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-bold rounded-md shadow-sm transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Descargar reporte en Excel"
+          >
+            <Download size={16} className="text-green-600" />
+            Exportar
+          </button>
+
+          <button 
+            onClick={onNewTicket}
+            className="px-6 py-2 bg-brand hover:bg-brand-hover text-white text-sm font-bold rounded-md shadow-sm transition flex items-center gap-2"
+          >
+            <span>+</span> Nuevo Ticket
+          </button>
+        </div>
       </div>
 
       {/* CONTENEDOR DE LA TABLA */}
@@ -73,17 +131,17 @@ export default function TicketList({ tickets, loading, onNewTicket }) {
               placeholder="Buscar por ID, título o solicitante..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand sm:text-sm transition"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition"
             />
           </div>
 
-          {/* NUEVO: Selector de Vistas */}
+          {/* Selector de Vistas */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <label className="text-xs font-bold text-gray-500 uppercase">Vista:</label>
             <select 
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value)}
-              className="p-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 focus:ring-2 focus:ring-brand outline-none cursor-pointer shadow-sm"
+              className="p-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm"
             >
               <option value="DEFAULT">Pendientes (Mes Actual)</option>
               <option value="OPEN_ALL">Todos los Pendientes</option>
@@ -114,11 +172,7 @@ export default function TicketList({ tickets, loading, onNewTicket }) {
               ) : filteredTickets.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-6 py-16 text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                    </svg>
                     <h3 className="text-sm font-bold text-gray-900">No se encontraron tickets en esta vista</h3>
-                    <p className="mt-1 text-sm text-gray-500">Intenta cambiar el filtro de vista o buscar otro término.</p>
                   </td>
                 </tr>
               ) : (
