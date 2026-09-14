@@ -44,7 +44,7 @@ const DEPARTMENT_OPTIONS = [
 const PHASE_OPTIONS = [
   { value: "R1_POR_CONTACTAR", label: "R1" },
   { value: "R2_CONTACTADO", label: "R2" },
-  { value: "R2_ASIGNADO", label: "R3" },
+  { value: "R3_ASIGNADO", label: "R3" },
 ];
 
 const checkboxColumn = (accessorKey, label, updateData, getDisabled) => ({
