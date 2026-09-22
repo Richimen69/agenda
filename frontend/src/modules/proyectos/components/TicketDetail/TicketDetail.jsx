@@ -29,7 +29,7 @@ export default function TicketDetail({
       <TicketHeader
         ticket={ticket}
         isCreator={isCreator}
-        onBack={() => navigate(-1)}
+        onBack={onBack}
         onStatusChange={onStatusChange}
         onDeleteRequest={() => setIsDeleteModalOpen(true)}
       />

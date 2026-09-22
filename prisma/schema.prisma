@@ -623,8 +623,10 @@ enum SessionStatus {
 enum Status {
   NUEVO
   EN_PROGRESO
+  EN_ESPERA
   REVISION
   COMPLETADO
+  CANCELADO
 }
 
 enum ReminderStatus {

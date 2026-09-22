@@ -4,7 +4,6 @@ import TicketDetail from "../components/TicketDetail";
 import { deleteTicket } from "../../../services/api";
 import { useTicket } from "../../../hooks/useTicket";
 
-
 export default function TicketDetailPage({ authUser }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -51,7 +50,9 @@ export default function TicketDetailPage({ authUser }) {
       ticket={ticket}
       users={ticket.assignees}
       activeUserId={authUser.id}
-      onBack={() => navigate("/")}
+      onBack={() => {
+        window.location.href = "/tareas";
+      }}
       onStatusChange={(ticketId, status) => changeStatus(status)}
       onAddComment={(ticketId, text) => addComment(text)}
       onAddSubtask={addSubtask}

@@ -1,17 +1,26 @@
-import { Circle, CheckCircle } from "lucide-react";
-import {
-  PRIORITY_CONFIG,
-  STATUS_CONFIG,
-  getInitials,
-} from "../../../utils/constants";
-import { ArrowDown, Minus, ArrowUp, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { 
+  Circle, 
+  CheckCircle, 
+  CheckSquare, 
+  MessageSquare,
+  ArrowDown, 
+  Minus, 
+  ArrowUp, 
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
+} from "lucide-react";
+import dayjs from "dayjs";
+import { PRIORITY_CONFIG, STATUS_CONFIG, getInitials } from "../../../utils/constants";
+import { toggleSubtask } from "../services/subtasks.api";
 
 const ICON_MAP = { ArrowDown, Minus, ArrowUp, AlertTriangle };
 
-// 1. Mapeo estricto al nuevo Sistema UI (Protege contra colores viejos en tus constantes)
 const getSemanticStatus = (status) => {
   const map = {
     NUEVO: "bg-status-neutral/10 text-status-neutral",
+    PENDIENTE: "bg-status-neutral/10 text-status-neutral",
     EN_PROGRESO: "bg-status-warning/10 text-status-warning",
     REVISION: "bg-status-warning/10 text-status-warning",
     COMPLETADO: "bg-status-success/10 text-status-success",
@@ -21,10 +30,10 @@ const getSemanticStatus = (status) => {
 
 const getSemanticPriority = (priority) => {
   const map = {
-    BAJA: "text-status-neutral", // Gris
-    MEDIA: "text-status-warning", // Naranja/Ámbar
-    ALTA: "text-brand", // Usamos el Rojo Toyota para llamar la atención
-    URGENTE: "text-status-danger font-bold", // Rojo oscuro + Bold para máxima alerta
+    BAJA: "text-status-neutral",
+    MEDIA: "text-status-warning",
+    ALTA: "text-brand",
+    URGENTE: "text-status-danger font-bold",
   };
   return map[priority] || map.MEDIA;
 };
@@ -35,147 +44,173 @@ export default function TicketCard({
   onClick,
   variant = "assignee",
 }) {
+  const [isExpanded, setIsExpanded] = useState(false); 
+  const [localSubtasks, setLocalSubtasks] = useState(ticket.subtasks || []);
+
+
+  useEffect(() => {
+    setLocalSubtasks(ticket.subtasks || []);
+  }, [ticket.subtasks]);
+
   const isCompleted = ticket.status === "COMPLETADO";
   const statusConfig = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.NUEVO;
   const priorityConfig = PRIORITY_CONFIG[ticket.priority];
   const IconoDinamico = ICON_MAP[priorityConfig?.icon];
-  // 2. Footer optimizado (El que construimos previamente)
-  const footer =
-    variant === "assignee" ? (
-      <div className="flex justify-between items-center mt-3 pt-3 border-t border-layout-border">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-content-muted">
-            Asignado por
-          </span>
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-full bg-status-neutral text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-layout-surface">
-              {activeUserId = ticket.creator?.id ? getInitials(ticket.creator?.name) : null}
-            </div>
-            <span className="text-xs font-semibold text-content-main">
-              {ticket.creator?.name}
-            </span>
-          </div>
-        </div>
+  
+
+  const totalSubtasks = localSubtasks.length;
+  const completedSubtasks = localSubtasks.filter(s => s.isDone).length; 
+  
+  const mainProgress = ticket.projectAction?.progress || 0; 
+  const commentsCount = ticket.comments?.length || 0;
+  const isOverdue = ticket.dueDate && dayjs(ticket.dueDate).isBefore(dayjs(), "day") && !isCompleted;
+
+  const handleToggle = async (e, subtaskId, currentStatus) => {
+    e.stopPropagation(); 
+    const newStatus = !currentStatus;
+
+    const updatedSubtasks = localSubtasks.map(sub => 
+      sub.id === subtaskId ? { ...sub, isDone: newStatus } : sub
+    );
+    setLocalSubtasks(updatedSubtasks);
+
+    try {
+      await toggleSubtask(subtaskId, newStatus, activeUserId);
+    } catch (error) {
+      // Si falla el servidor, deshacemos el cambio visualmente para evitar desincronización
+      console.error("Error al actualizar la subtarea:", error);
+      setLocalSubtasks(localSubtasks);
+      alert("Hubo un error de conexión al actualizar la subtarea.");
+    }
+  };
+
+  const footer = (
+    <div className="flex justify-between items-center mt-3 pt-3 border-t border-layout-border gap-4">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-xs font-medium text-content-muted shrink-0">
+          {variant === "assignee" ? "Por" : "Para"}
+        </span>
+        <span className="text-xs font-semibold text-content-main truncate">
+          {variant === "assignee" 
+            ? ticket.creator?.name 
+            : ticket.assignees.map((a) => (a.id === activeUserId ? `${a.name} (Tú)` : a.name)).join(", ")}
+        </span>
+      </div>
+
+      <div className="shrink-0">
         {isCompleted ? (
           <span className="flex items-center gap-1 text-xs font-semibold text-status-success">
             <CheckCircle className="w-4 h-4" /> Resuelta
           </span>
         ) : (
-          <div className="flex items-center gap-1.5 text-xs font-medium text-content-muted">
-            <svg
-              className="w-3.5 h-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            {ticket.dueDate
-              ? new Date(ticket.dueDate).toLocaleDateString("es-MX")
-              : "Sin límite"}
+          <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? "text-red-500 font-bold" : "text-content-muted"}`}>
+            {ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString("es-MX") : "Sin límite"}
           </div>
         )}
       </div>
-    ) : (
-      <div className="flex justify-between items-center mt-3 pt-3 border-t border-layout-border gap-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-medium text-content-muted shrink-0">
-            Para
-          </span>
-          <span
-            className="text-xs font-semibold text-content-main truncate"
-            title={ticket.assignees.map((a) => a.name).join(", ")}
-          >
-            {ticket.assignees
-              .map((a) => (a.id === activeUserId ? `${a.name} (Tú)` : a.name))
-              .join(", ")}
-          </span>
-        </div>
-        <div className="shrink-0">
-          {ticket.status === "REVISION" ? (
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs font-semibold bg-status-success hover:bg-status-success/90 text-white px-2.5 py-1.5 rounded-md transition-colors shadow-sm cursor-pointer"
-            >
-              Aprobar Tarea
-            </button>
-          ) : isCompleted ? (
-            <span className="flex items-center gap-1 text-xs font-semibold text-status-success">
-              <CheckCircle className="w-4 h-4" /> Resuelta
-            </span>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs font-medium text-content-muted">
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              {ticket.dueDate
-                ? new Date(ticket.dueDate).toLocaleDateString("es-MX")
-                : "Sin límite"}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-
+    </div>
+  );
 
   return (
     <div
       onClick={onClick}
-      className={`group flex items-start gap-3 p-4 bg-layout-surface border-b border-layout-border hover:bg-layout-hover transition-colors cursor-pointer ${isCompleted ? "opacity-75" : ""}`}
+      className={`group flex flex-col p-4 bg-layout-surface hover:bg-layout-hover transition-colors cursor-pointer ${isCompleted ? "opacity-75" : ""}`}
     >
-      {/* Ícono Interactivo de Estado */}
-      {variant === "assignee" && (
-        <div className="pt-0.5 shrink-0">
-          {isCompleted ? (
-            <CheckCircle className="w-4 h-4 text-status-success" />
-          ) : (
-            <Circle className="w-4 h-4 text-layout-border group-hover:text-brand transition-colors" />
+      <div className="flex items-start gap-3 w-full">
+        <div className="flex-1 min-w-0">
+          <h4 className={`text-sm font-medium mb-2 transition-all truncate ${isCompleted ? "text-content-disabled line-through" : "text-content-main"}`}>
+            {ticket.title}
+          </h4>
+          
+          <div className="flex flex-wrap items-center gap-y-2 gap-x-3 mb-1.5">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${getSemanticStatus(ticket.status)}`}>
+              {statusConfig.label}
+            </span>
+            
+            <span className="w-1 h-1 rounded-full bg-layout-border shrink-0"></span>
+            
+            <span className={`flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider shrink-0 ${getSemanticPriority(ticket.priority)}`}>
+              {IconoDinamico && <IconoDinamico size={14} strokeWidth={2.5} />}
+              {priorityConfig?.label ?? ticket.priority}
+            </span>
+
+            {(totalSubtasks > 0 || commentsCount > 0) && (
+               <span className="w-1 h-1 rounded-full bg-layout-border shrink-0"></span>
+            )}
+
+            {totalSubtasks > 0 && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation(); 
+                  setIsExpanded(!isExpanded);
+                }}
+                className={`flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded transition-colors ${isExpanded ? "bg-brand/10 text-brand" : "hover:bg-layout-border/50 text-content-muted"} shrink-0 cursor-pointer`}
+              >
+                <CheckSquare className="w-3 h-3" />
+                <span>{completedSubtasks}/{totalSubtasks}</span>
+                {isExpanded ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
+              </button>
+            )}
+
+            {commentsCount > 0 && (
+              <div className="flex items-center gap-1 text-[11px] font-medium text-content-muted shrink-0">
+                <MessageSquare className="w-3 h-3" />
+                <span>{commentsCount}</span>
+              </div>
+            )}
+          </div>
+
+          {mainProgress > 0 && !isCompleted && (
+            <div className="w-full h-1 bg-layout-border/30 rounded-full overflow-hidden mt-2.5 mb-1.5 flex">
+              <div 
+                className="h-full bg-brand transition-all duration-500" 
+                style={{ width: `${mainProgress}%` }} 
+              />
+            </div>
           )}
+
+          {footer}
+        </div>
+      </div>
+
+      {isExpanded && totalSubtasks > 0 && (
+        <div className="mt-4 pt-3 border-t border-layout-border/50 flex flex-col gap-2 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+          {localSubtasks.map((sub) => (
+            <div key={sub.id} className="flex flex-col gap-1.5 p-2 rounded-md hover:bg-layout-border/30 transition-colors">
+              <div className="flex items-start gap-2">
+                <input 
+                  type="checkbox" 
+                  checked={sub.isDone}
+                  onChange={(e) => handleToggle(e, sub.id, sub.isDone)}
+                  className="mt-0.5 rounded border-layout-border text-brand focus:ring-brand cursor-pointer shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[13px] font-medium leading-tight truncate ${sub.isDone ? "text-content-disabled line-through" : "text-content-main"}`}>
+                    {sub.title}
+                  </p>
+                  <p className="text-[11px] text-content-muted truncate mt-0.5">
+                    Resp: <span className="font-semibold">{sub.assignee?.name}</span>
+                  </p>
+                </div>
+              </div>
+              
+              {sub.projectAction && (
+                <div className="flex items-center gap-2 pl-6">
+                  <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${sub.projectAction.progress >= 100 ? "bg-status-success" : "bg-brand"}`} 
+                      style={{ width: `${Math.min(sub.projectAction.progress, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-content-muted w-8 text-right">
+                    {Math.round(sub.projectAction.progress)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
-
-      <div className="flex-1 min-w-0">
-        <h4
-          className={`text-sm font-medium mb-1.5 transition-all truncate ${isCompleted ? "text-content-disabled line-through" : "text-content-main"}`}
-        >
-          {ticket.title}
-        </h4>
-        <div className="flex items-center gap-3 mb-1.5">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${getSemanticStatus(ticket.status)}`}
-          >
-            {statusConfig.label}
-          </span>
-          <span className="w-1 h-1 rounded-full bg-layout-border"></span>
-          <span
-            className={`flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider ${getSemanticPriority(ticket.priority)}`}
-          >
-            {IconoDinamico && (
-              <span className="flex items-center justify-center">
-                <IconoDinamico size={14} strokeWidth={2.5} />
-              </span>
-            )}
-            {priorityConfig?.label ?? ticket.priority}
-          </span>
-        </div>
-
-        {footer}
-      </div>
     </div>
   );
 }
