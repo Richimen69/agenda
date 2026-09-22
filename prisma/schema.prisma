@@ -404,7 +404,8 @@ model Lead {
   isReturning       Boolean         @default(false)
   branch            Branch          @default(GUERRERO)
   captureView       CaptureViewType @default(ALL)
-  // OPTIMIZACIÓN 3: Historial de comentarios relacional
+  isHighlighted     Boolean         @default(false)
+  isTrash           Boolean         @default(false)
   comments          LeadComment[]
 
   createdAt DateTime @default(now())

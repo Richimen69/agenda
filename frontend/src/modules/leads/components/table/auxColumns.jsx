@@ -1,12 +1,12 @@
-import { ArrowUpDown, RefreshCcw } from "lucide-react";
+import { ArrowUpDown, RefreshCcw, Star } from "lucide-react";
 import {
   EditableTextCell,
   BadgeSelectCell,
   CheckboxCell,
   EditableSelectCell,
   VentaCell,
+  EditableDateCell,
 } from "./cells/EditableCells";
-import { RecoveryStatusCell } from "./cells/RecoveryStatusCell";
 import { EstadoBadge } from "./cells/EstadoBadge";
 import { formatDate } from "../../utils/leadsHelpers";
 import { VENTA_AUTO_LOCK_DEPARTMENTS } from "../../utils/leadsHelpers";
@@ -76,13 +76,33 @@ export function buildAuxColumns(
 
   return [
     {
+      id: "highlight",
+      header: () => <span></span>,
+      cell: ({ row }) => {
+        const isHighlighted = row.original.isHighlighted;
+        return (
+          <button
+            className="flex items-center justify-center px-1 outline-none"
+            onClick={() =>
+              updateData(row.index, "isHighlighted", !isHighlighted)
+            }
+            title={isHighlighted ? "Quitar destacado" : "Destacar lead"}
+          >
+            <Star
+              className={`w-4 h-4 cursor-pointer transition-colors ${
+                isHighlighted
+                  ? "text-purple-400 fill-purple-400"
+                  : "text-gray-300 hover:text-purple-400"
+              }`}
+            />
+          </button>
+        );
+      },
+    },
+    {
       header: SortableHeader("Fecha"),
       accessorKey: "date",
-      cell: ({ getValue }) => (
-        <div className="text-[13px] text-gray-700 py-1.5 px-1 whitespace-nowrap">
-          {formatDate(getValue())}
-        </div>
-      ),
+      cell: (props) => <EditableDateCell {...props} updateData={updateData} />,
     },
     {
       header: SortableHeader("Número"),

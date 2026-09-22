@@ -128,6 +128,7 @@ export const AllTable = ({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 25 } },
+    autoResetPageIndex: false,
   });
 
   const filteredCount = table.getFilteredRowModel().rows.length;

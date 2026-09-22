@@ -55,7 +55,7 @@ export const AuxTable = ({
   const [globalFilter, setGlobalFilter] = useState("");
   const [timelineLeadId, setTimelineLeadId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  
+
   // 2. NUEVO ESTADO PARA LOS FILTROS DE COLUMNAS
   const [columnFilters, setColumnFilters] = useState([]);
 
@@ -105,15 +105,16 @@ export const AuxTable = ({
     data,
     columns,
     // 4. AGREGAMOS COLUMNFILTERS AL ESTADO DE TANSTACK
-    state: { globalFilter, columnFilters }, 
+    state: { globalFilter, columnFilters },
     onGlobalFilterChange: setGlobalFilter,
-    onColumnFiltersChange: setColumnFilters, 
+    onColumnFiltersChange: setColumnFilters,
     globalFilterFn: globalLeadFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 25 } },
+    autoResetPageIndex: false,
   });
 
   const timelineLead = data.find((l) => l.id === timelineLeadId) || null;
@@ -138,7 +139,6 @@ export const AuxTable = ({
 
       {/* CONTENEDOR PRINCIPAL */}
       <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 overflow-hidden">
-        
         {/* 5. NUESTRO NUEVO COMPONENTE DE BARRA DE HERRAMIENTAS */}
         <TableToolbar
           searchPlaceholder="Buscar por cliente, teléfono, interés u origen..."
@@ -181,21 +181,46 @@ export const AuxTable = ({
                   </td>
                 </tr>
               ) : (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-gray-50/80 transition-colors duration-150 ease-in-out group"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-2.5">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  // LÓGICA DE COLORES
+                  const {
+                    amount,
+                    isHighlighted,
+                    hasAppointment,
+                    isReturning,
+                    isTrash,
+                  } = row.original;
+
+                  let rowBgClass = "bg-white hover:bg-gray-50/80"; // Default
+
+                  if (amount > 0) {
+                    rowBgClass = "bg-green-100 hover:bg-green-200"; // 1º Prioridad: Venta
+                  } else if (isTrash) {
+                    rowBgClass = "bg-red-300 hover:bg-red-400"; // 2º Prioridad: Basura (Sobrescribe lo demás)
+                  } else if (isHighlighted) {
+                    rowBgClass = "bg-purple-100 hover:bg-purple-200"; // 3º Prioridad: Destacado
+                  } else if (hasAppointment) {
+                    rowBgClass = "bg-yellow-100 hover:bg-yellow-200"; // 4º Prioridad: Cita
+                  } else if (isReturning) {
+                    rowBgClass = "bg-red-50 hover:bg-red-100"; // 5º Prioridad: Reingreso
+                  }
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`${rowBgClass} transition-colors duration-150 ease-in-out group`}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-4 py-2.5">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -259,6 +284,12 @@ export const AuxTable = ({
         onClose={() => setTimelineLeadId(null)}
         onAddComment={addComment}
         user={user}
+        onMarkAsTrash={(leadId) => {
+          const rowIndex = data.findIndex((l) => l.id === leadId);
+          if (rowIndex !== -1) {
+            updateCell(rowIndex, "isTrash", true);
+          }
+        }}
       />
       <CreateLeadModal
         isOpen={modalOpen}

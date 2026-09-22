@@ -1,10 +1,11 @@
 import React from "react";
-import { MessageCircle, User, Scissors, RefreshCw, Users, Info } from "lucide-react";
+import { MessageCircle, User, Scissors, RefreshCw, Users, DollarSign } from "lucide-react";
 
-// Degradado de rojo oscuro a rosa claro, igual al mockup
-const FUNNEL_COLORS = ["#B91C1C", "#DC2626", "#EF4444", "#F87171", "#FCA5A5"];
+// Agregamos un sexto color al degradado (#FECACA es un rojo aún más claro)
+const FUNNEL_COLORS = ["#B91C1C", "#DC2626", "#EF4444", "#F87171", "#FCA5A5", "#FECACA"];
 
-const FUNNEL_ICONS = [MessageCircle, User, Scissors, RefreshCw, Users];
+// Agregamos DollarSign para representar las ventas
+const FUNNEL_ICONS = [MessageCircle, User, Scissors, RefreshCw, Users, DollarSign];
 
 export const RecoveryFunnel = ({ data }) => {
   if (!data) return null;
@@ -15,6 +16,7 @@ export const RecoveryFunnel = ({ data }) => {
     { value: data.noContactables, label: "no contactados" },
     { value: data.recuperados, label: "llamadas realizadas", badge: `${data.recuperacionRate}% llamadas` },
     { value: data.traidosDeVuelta, label: "clientes traídos de vuelta para nuevos y comonuevos", badge: `${data.efectividadRate}% de efectividad` },
+    { value: data.ventasReingreso || 0, label: "ventas generadas por reingreso" },
   ];
 
   return (
@@ -30,7 +32,7 @@ export const RecoveryFunnel = ({ data }) => {
 
       <div className="space-y-0">
         {steps.map((step, i) => {
-          // Cada fila se angosta 7% por lado respecto a la anterior -> efecto embudo
+          // La lógica matemática del clipPath ya soporta el 6to elemento automáticamente sin romperse
           const topInset = i * 7;
           const bottomInset = (i + 1) * 7;
           const Icon = FUNNEL_ICONS[i];
@@ -54,9 +56,14 @@ export const RecoveryFunnel = ({ data }) => {
                 <span className="text-brand text-lg">»</span>
                 <span className="text-2xl font-bold text-brand shrink-0">{step.value}</span>
                 <span className="text-sm text-gray-600 leading-tight">{step.label}</span>
+                
+                {/* Opcional: renderizar el badge si existe */}
+                {step.badge && (
+                  <span className="ml-auto text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                    {step.badge}
+                  </span>
+                )}
               </div>
-
-
             </div>
           );
         })}

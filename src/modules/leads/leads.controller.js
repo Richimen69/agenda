@@ -129,13 +129,17 @@ export const updateLead = async (req, res) => {
 };
 export const getLeads = async (req, res) => {
   try {
-    const { start, end, q } = req.query; // Recibimos 'q'
+    const { start, end, q, destacados } = req.query; // Recibimos 'q'
     const moduleRoles = req.user?.moduleRoles || [];
     let whereCondition = {};
 
     // 1. Lógica de roles (igual que antes)
     if (moduleRoles.includes("LEADS_AUX")) {
       whereCondition.department = { in: ["NUEVOS", "SEMINUEVOS", "DIGITAL"] };
+    }
+
+    if (destacados === "true") {
+      whereCondition.isHighlighted = true;
     }
 
     // 2. Si hay búsqueda (q), ignoramos el mes y buscamos en todo el historial
@@ -176,7 +180,7 @@ export const getLeads = async (req, res) => {
 
     res.json(leads);
   } catch (error) {
-    console.error("🔥 ERROR EN GET LEADS:", error);
+    console.error("ERROR EN GET LEADS:", error);
     res.status(500).json({ error: "Error" });
   }
 };

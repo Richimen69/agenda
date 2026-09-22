@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { X, PlusCircle, Bot, User } from "lucide-react";
+// Agregamos el icono Ban (o puede ser Trash) para identificar la acción
+import { X, PlusCircle, Bot, User, Ban } from "lucide-react";
 
 const formatDateTime = (value) =>
   new Date(value).toLocaleString("es-MX", {
@@ -10,7 +11,7 @@ const formatDateTime = (value) =>
     minute: "2-digit",
   });
 
-export const LeadTimelineModal = ({ lead, isOpen, onClose, onAddComment, user }) => {
+export const LeadTimelineModal = ({ lead, isOpen, onClose, onAddComment, user, onMarkAsTrash }) => {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -36,9 +37,27 @@ export const LeadTimelineModal = ({ lead, isOpen, onClose, onAddComment, user })
             <h3 className="text-lg font-semibold text-gray-900">{lead.fullName}</h3>
             <p className="text-xs text-gray-400">{lead.phone} · Bitácora de seguimiento</p>
           </div>
-          <button onClick={onClose}>
-            <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-          </button>
+          
+          {/* NUEVO CONTENEDOR DE ACCIONES EN LA CABECERA */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (window.confirm("¿Estás seguro de marcar este lead como basura?")) {
+                  onMarkAsTrash(lead.id);
+                  onClose(); // Opcional: cerrar el modal después de marcarlo
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors cursor-pointer"
+              title="Descartar lead"
+            >
+              <Ban className="w-3.5 h-3.5" />
+              Marcar como basura
+            </button>
+
+            <button onClick={onClose} className="p-1">
+              <X className="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
+            </button>
+          </div>
         </div>
 
         {/* TIMELINE */}
@@ -84,7 +103,7 @@ export const LeadTimelineModal = ({ lead, isOpen, onClose, onAddComment, user })
           <button
             onClick={handleAdd}
             disabled={saving || !note.trim()}
-            className="flex items-center gap-1 px-3 py-2 bg-brand text-white rounded-md text-sm disabled:opacity-50"
+            className="flex items-center gap-1 px-3 py-2 bg-brand text-white rounded-md text-sm disabled:opacity-50 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
           </button>

@@ -120,46 +120,76 @@ export const getRecoveryFunnel = async (req, res) => {
 
     const targetDepartments = { in: ["NUEVOS", "SEMINUEVOS"] };
 
-    const [leadsTotales, enSeguimiento, recuperados, traidosDeVuelta] =
+    // Condición base: Creados este mes OR reactivados este mes
+    const validLeadsForMonth = {
+      OR: [
+        { date: { gte: startDate, lt: endDate } },
+        {
+          comments: {
+            some: {
+              type: "SYSTEM_REACTIVATED",
+              createdAt: { gte: startDate, lt: endDate },
+            },
+          },
+        },
+      ],
+    };
+
+    // Combinamos el filtro de departamento con las fechas válidas
+    const baseWhere = {
+      department: targetDepartments,
+      ...validLeadsForMonth,
+    };
+
+    const [leadsTotales, enSeguimiento, recuperados, traidosDeVuelta, ventasReingreso] =
       await Promise.all([
-        // 1. Leads totales
+        // 1. Leads totales (Nuevos + Reingresos del mes)
         prisma.lead.count({
-          where: {
-            date: { gte: startDate, lt: endDate },
-            department: targetDepartments,
-          },
+          where: baseWhere,
         }),
-        // 2. Leads en seguimiento
+        // 2. Leads en seguimiento (dentro de ese universo)
         prisma.lead.count({
           where: {
+            ...baseWhere,
             recoveryStatus: "EN_SEGUIMIENTO",
-            date: { gte: startDate, lt: endDate },
-            department: targetDepartments,
           },
         }),
-        // 3. Leads recuperados
+        // 3. Leads recuperados (dentro de ese universo)
         prisma.lead.count({
           where: {
-            contactState: "R2_CONTACTADO",
-            date: { gte: startDate, lt: endDate },
-            department: targetDepartments,
+            ...baseWhere,
+            contactState: {
+              notIn: ["R1_POR_CONTACTAR"],
+              not: null,
+            },
           },
         }),
-        // 4. Comentarios de reactivación
-        prisma.leadComment.count({
+        // 4. Leads traídos de vuelta (Solo los que tuvieron reingreso este mes)
+        prisma.lead.count({
           where: {
-            type: "SYSTEM_REACTIVATED",
-            lead: {
-              date: { gte: startDate, lt: endDate },
-              department: targetDepartments,
+            department: targetDepartments,
+            comments: {
+              some: {
+                type: "SYSTEM_REACTIVATED",
+                createdAt: { gte: startDate, lt: endDate },
+              },
+            },
+          },
+        }),
+        prisma.lead.count({
+          where: {
+            department: targetDepartments,
+            amount: { gt: 0 },
+            comments: {
+              some: {
+                type: "SYSTEM_REACTIVATED",
+                createdAt: { gte: startDate, lt: endDate },
+              },
             },
           },
         }),
       ]);
-    const noContactables =
-      enSeguimiento > recuperados
-        ? leadsTotales - enSeguimiento - recuperados
-        : 0;
+    const noContactables = Math.max(0, enSeguimiento - recuperados);
 
     const conversionRate =
       leadsTotales > 0 ? +((enSeguimiento / leadsTotales) * 100).toFixed(1) : 0;
@@ -181,6 +211,7 @@ export const getRecoveryFunnel = async (req, res) => {
         enSeguimiento,
         recuperados,
         traidosDeVuelta,
+        ventasReingreso,
         noContactables,
         conversionRate,
         recuperacionRate,

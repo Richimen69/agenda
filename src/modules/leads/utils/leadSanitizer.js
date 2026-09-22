@@ -21,6 +21,8 @@ const ALLOWED_LEAD_FIELDS = [
   "isReturning",
   "branch",
   "captureView",
+  "isHighlighted",
+  "isTrash",
 ];
 
 /**

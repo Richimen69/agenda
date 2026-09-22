@@ -24,15 +24,20 @@ export function useAppData(authUser) {
 
   const fetchLeadsByMonth = useCallback(async (month, searchQuery = "") => {
     try {
-      const startDate = dayjs(month).startOf("month").toISOString();
-      const endDate = dayjs(month).endOf("month").toISOString();
-      const leadsData = await getLeads({
-        start: startDate,
-        end: endDate,
-        q: searchQuery,
-      });
+      // 1. Preparamos los parámetros base (solo la búsqueda)
+      let params = { q: searchQuery };
+
+      // 2. Solo calculamos las fechas si el mes NO es "all"
+      if (month !== "all") {
+        params.start = dayjs(month).startOf("month").toISOString();
+        params.end = dayjs(month).endOf("month").toISOString();
+      }
+
+      // 3. Hacemos la petición
+      const leadsData = await getLeads(params);
+
       setLeads(leadsData);
-      setLeadsMonth(month);
+      setLeadsMonth(month); // Guardará el mes seleccionado o "all"
     } catch (err) {
       console.error(err);
     }
