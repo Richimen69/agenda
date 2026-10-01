@@ -3,10 +3,14 @@ import prisma from '#config/prisma';
 
 export const createArea = async (req, res) => {
   try {
-    const { name, parentId } = req.body;
+    const { name, parentId, icon } = req.body;
 
     const area = await prisma.area.create({
-      data: { name, parentId: parentId || null },
+      data: { 
+        name, 
+        parentId: parentId || null,
+        icon: icon || "Folder"
+      },
     });
 
     res.status(201).json({ success: true, data: area });
@@ -65,5 +69,26 @@ export const deleteArea = async (req, res) => {
     res
       .status(500)
       .json({ success: false, error: "Error al eliminar el área" });
+  }
+};
+
+export const updateArea = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, parentId, icon } = req.body;
+
+    const area = await prisma.area.update({
+      where: { id },
+      data: { 
+        name, 
+        parentId: parentId || null,
+        icon 
+      },
+    });
+
+    res.status(200).json({ success: true, data: area });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Error al actualizar el área" });
   }
 };

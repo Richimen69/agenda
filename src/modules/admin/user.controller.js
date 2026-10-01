@@ -8,7 +8,15 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      include: {
+        area: {
+          select: { id: true, name: true } 
+        }
+      }
+    });
+
     if (!user) {
       return res.status(404).json({ success: false, error: "Usuario no encontrado" });
     }
@@ -22,7 +30,6 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, error: "Contraseña incorrecta" });
     }
 
-    // Payload del token: lo mínimo necesario para autorizar requests futuros
     const token = jwt.sign(
       {
         id: user.id,
@@ -55,7 +62,10 @@ export const getMe = async (req, res) => {
         area: { select: { id: true, name: true } },
       },
     });
-    if (!user) return res.status(404).json({ success: false, error: "Usuario no encontrado" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
     res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -113,7 +123,7 @@ export const getUsers = async (req, res) => {
         email: true,
         whatsappPhone: true,
         role: true,
-        moduleRoles: true, // opcional, útil si el frontend quiere mostrar el rol del módulo
+        moduleRoles: true,
         isActive: true,
       },
     });
@@ -135,9 +145,9 @@ export const getUserById = async (req, res) => {
         whatsappPhone: true,
         area: {
           select: {
-            name: true, // "Asesores de Ventas"
-            parent: { select: { name: true } }, // "Ventas"
-            id: true, // ID del área
+            name: true,
+            parent: { select: { name: true } },
+            id: true,
           },
         },
       },
@@ -248,7 +258,9 @@ export const changePassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ success: false, error: "Usuario no encontrado" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
     }
 
     // Validar contraseña actual

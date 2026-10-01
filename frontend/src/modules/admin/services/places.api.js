@@ -5,3 +5,6 @@ export const createPlace = async (data) => fetchJSON(`${API_URL}/areas`, 'POST',
 export const getPlaces = async () => {
   return await fetchJSON(`${API_URL}/areas/tree`, "GET");
 };
+
+export const updatePlace = async (id, data) =>
+  fetchJSON(`${API_URL}/areas/${id}`, "PUT", data);

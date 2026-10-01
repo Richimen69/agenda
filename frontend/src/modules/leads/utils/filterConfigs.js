@@ -75,6 +75,15 @@ export const getAuxTableFilters = (users = []) => {
       options: ["NUEVOS", "SEMINUEVOS", "DIGITAL"],
     },
     {
+      id: "assignment",
+      label: "Asesor / Estado",
+      options: [
+        { label: "Con asesor asignado", value: "NOT_NULL" },
+        { label: "Sin asesor", value: "IS_NULL" },
+        ...asesoresOptions,
+      ],
+    },
+    {
       id: "contactMethod",
       label: "Medio Contacto",
       options: [
@@ -88,11 +97,6 @@ export const getAuxTableFilters = (users = []) => {
       id: "branch",
       label: "Sucursal",
       options: ["GUERRERO", "CHILPANCINGO"],
-    },
-    {
-      id: "assignment",
-      label: "Asesor",
-      options: asesoresOptions,
     },
     {
       id: "isReturning",

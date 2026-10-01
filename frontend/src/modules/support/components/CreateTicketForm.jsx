@@ -19,6 +19,7 @@ export default function CreateTicketForm({
   categories,
   onCancel,
   onSuccess,
+  currentUser,
   users,
 }) {
   const [files, setFiles] = useState([]);
@@ -26,7 +27,10 @@ export default function CreateTicketForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [userSearch, setUserSearch] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState(
+    currentUser?.role !== "ADMIN" ? currentUser?.id : "",
+  );
+  console.log(currentUser);
   const dropdownRef = useRef(null);
   const usersFiltrados = userSearch.trim()
     ? users?.filter((user) =>
@@ -35,7 +39,9 @@ export default function CreateTicketForm({
     : users;
   const selectedUserName =
     users?.find((u) => u.id === selectedUserId)?.name ||
-    "Seleccionar solicitante";
+    (selectedUserId === currentUser?.id
+      ? currentUser?.name
+      : "Seleccionar solicitante");
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -46,9 +52,9 @@ export default function CreateTicketForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   const handleSelectUser = (id) => {
-    setSelectedUserId(id); // Guardamos el ID
-    setIsOpen(false); // Cerramos el menú
-    setUserSearch(""); // Limpiamos la búsqueda
+    setSelectedUserId(id);
+    setIsOpen(false);
+    setUserSearch("");
   };
   // Lógica de Archivos
   const handleFileChange = (e) => {
@@ -164,6 +170,7 @@ export default function CreateTicketForm({
               type="datetime-local"
               name="createdAt"
               required
+              disabled={currentUser.role !== "ADMIN"}
               defaultValue={todayWithTime}
               className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none"
             />
@@ -220,14 +227,22 @@ export default function CreateTicketForm({
             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
               Fuente de Solicitud *
             </label>
+
+            {/* Input oculto: Asegura que el valor se envíe al backend aunque el select esté deshabilitado */}
+            {currentUser?.role !== "ADMIN" && (
+              <input type="hidden" name="source" value="PORTAL" />
+            )}
+
             <select
               name="source"
-              required
-              className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none cursor-pointer"
+              required={currentUser?.role === "ADMIN"}
+              disabled={currentUser?.role !== "ADMIN"}
+              defaultValue="PORTAL"
+              className="w-full p-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed cursor-pointer bg-white"
             >
-              <option value="PORTAL">Portal Web</option>
+              <option value="PORTAL">Kyojin</option>
               <option value="PRESENCIAL">Presencial</option>
-              <option value="TELEFONO">Telefono</option>
+              <option value="TELEFONO">Teléfono</option>
               <option value="WHATSAPP">WhatsApp</option>
             </select>
           </div>
@@ -248,6 +263,7 @@ export default function CreateTicketForm({
             </label>
 
             {/* Input oculto: Mantiene la compatibilidad con tu formulario nativo */}
+
             <input
               type="hidden"
               name="solicitate"
@@ -259,7 +275,12 @@ export default function CreateTicketForm({
             <button
               type="button"
               onClick={() => setIsOpen(!isOpen)}
-              className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-sm flex justify-between items-center focus:ring-2 focus:ring-brand outline-none cursor-pointer transition-shadow"
+              disabled={currentUser?.role !== "ADMIN"}
+              className={`w-full p-2.5 border border-gray-300 rounded-md text-sm flex justify-between items-center focus:ring-2 focus:ring-brand outline-none transition-shadow ${
+                currentUser?.role !== "ADMIN"
+                  ? "bg-gray-50 cursor-not-allowed"
+                  : "bg-white cursor-pointer"
+              }`}
             >
               <span
                 className={

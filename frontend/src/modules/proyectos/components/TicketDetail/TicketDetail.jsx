@@ -57,7 +57,7 @@ export default function TicketDetail({
         {/* Contenido (Respetando saltos de línea) */}
         <div className="p-5">
           {ticket.description ? (
-            <p className="text-sm text-content-main leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-sm text-content-main leading-relaxed whitespace-pre-wrap wrap-break-word">
               {ticket.description}
             </p>
           ) : (

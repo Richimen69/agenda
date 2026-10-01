@@ -133,6 +133,26 @@ export function buildAuxColumns(
     {
       header: SortableHeader("Asesor"),
       accessorKey: "assignment",
+      filterFn: (row, columnId, filterValues) => {
+        if (!filterValues || filterValues.length === 0) return true;
+        const cellValue = row.getValue(columnId);
+        if (filterValues.includes(cellValue)) return true;
+        if (
+          filterValues.includes("NOT_NULL") &&
+          cellValue !== null &&
+          cellValue !== undefined &&
+          cellValue !== ""
+        ) {
+          return true;
+        }
+        if (
+          filterValues.includes("IS_NULL") &&
+          (cellValue === null || cellValue === undefined || cellValue === "")
+        ) {
+          return true;
+        }
+        return false;
+      },
       cell: (props) => (
         <BadgeSelectCell
           {...props}

@@ -65,6 +65,11 @@ export default function EventosList({ events, userId, onUpdated, titulo }) {
                   .toUpperCase()
                   .substring(0, 2);
               };
+              const MAX_AVATARS = 5;
+              const visibleAttendees =
+                event.attendees?.slice(0, MAX_AVATARS) || [];
+              const extraAttendees =
+                (event.attendees?.length || 0) - MAX_AVATARS;
 
               return (
                 <article
@@ -73,7 +78,7 @@ export default function EventosList({ events, userId, onUpdated, titulo }) {
                     setIsModalOpen(true);
                     setData(event);
                   }}
-                  className={`group relative cursor-pointer rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md border border-slate-200 hover:border-slate-300`}
+                  className={`group relative cursor-pointer rounded-2xl bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md border border-slate-200 hover:border-slate-300`}
                 >
                   {/* Barra de acento lateral */}
                   <span
@@ -131,20 +136,30 @@ export default function EventosList({ events, userId, onUpdated, titulo }) {
 
                   {/* Footer: Colaboradores */}
                   <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3 pl-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                       <Users className="size-4 shrink-0" aria-hidden="true" />
                       <span>Colaboradores</span>
                     </div>
-                    <div className="flex items-center -space-x-2-reverse flex-row-reverse justify-end pl-2">
-                      {event.attendees?.map((attendee, index) => (
+                    <div className="flex items-center -space-x-2 pl-2">
+                      {visibleAttendees.map((attendee, index) => (
                         <span
                           key={attendee.id || index}
                           title={attendee.name}
-                          className="flex size-7 items-center justify-center rounded-full border-2 border-card bg-secondary text-xs font-semibold text-secondary-foreground"
+                          className="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-xs font-semibold text-slate-700 relative z-10"
                         >
                           {getInitials(attendee.name)}
                         </span>
                       ))}
+
+                      {/* Burbuja indicadora de restantes */}
+                      {extraAttendees > 0 && (
+                        <span
+                          title={`${extraAttendees} colaboradores más`}
+                          className="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gray-50 text-[10px] font-semibold text-gray-500 relative z-0"
+                        >
+                          +{extraAttendees}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </article>

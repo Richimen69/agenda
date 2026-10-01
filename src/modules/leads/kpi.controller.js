@@ -141,7 +141,7 @@ export const getRecoveryFunnel = async (req, res) => {
       ...validLeadsForMonth,
     };
 
-    const [leadsTotales, enSeguimiento, recuperados, traidosDeVuelta, ventasReingreso] =
+    const [leadsTotales, enSeguimiento, recuperados, traidosDeVuelta, ventasReingreso, asignados] =
       await Promise.all([
         // 1. Leads totales (Nuevos + Reingresos del mes)
         prisma.lead.count({
@@ -188,6 +188,7 @@ export const getRecoveryFunnel = async (req, res) => {
             },
           },
         }),
+        
       ]);
     const noContactables = Math.max(0, enSeguimiento - recuperados);
 
@@ -254,6 +255,7 @@ export const getDigitalFunnel = async (req, res) => {
       citas,
       shows,
       cotizacion,
+      asignados,
       ventas,
       ventasAmountResult,
     ] = await Promise.all([
@@ -270,6 +272,7 @@ export const getDigitalFunnel = async (req, res) => {
       prisma.lead.count({ where: { ...baseWhere, hasAppointment: true } }),
       prisma.lead.count({ where: { ...baseWhere, showedUp: true } }),
       prisma.lead.count({ where: { ...baseWhere, hasQuote: true } }),
+      prisma.lead.count({ where: { ...baseWhere, status: "ASIGNADO" } }),
       prisma.lead.count({
         where: { ...baseWhere, amount: { not: null, gt: 0 } },
       }),
@@ -296,6 +299,7 @@ export const getDigitalFunnel = async (req, res) => {
         shows,
         cotizacion,
         ventas,
+        asignados,
         totalAmount,
         contactadosPercent: calcPercent(contactados),
         citasPercent: calcPercent(citas),

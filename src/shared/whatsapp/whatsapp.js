@@ -1,6 +1,7 @@
 import pkg from "whatsapp-web.js";
 const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
+import prisma from "#config/prisma";
 
 let isClientReady = false;
 let client = null;

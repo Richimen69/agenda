@@ -1,56 +1,3 @@
-const STAGES = [
-  {
-    key: "leads",
-    label: "Leads",
-    width: "w-full",
-    clip: "[clip-path:polygon(0_0,100%_0,95%_100%,5%_100%)]",
-    bar: "bg-[#7C3AED]",
-    dot: "bg-[#7C3AED]",
-    text: "text-[#7C3AED]",
-    soft: "bg-[#7C3AED]/10",
-  },
-  {
-    key: "contactados",
-    label: "Asignados",
-    width: "w-[90%]",
-    clip: "[clip-path:polygon(0_0,100%_0,94%_100%,6%_100%)]",
-    bar: "bg-[#1D4ED8]",
-    dot: "bg-[#1D4ED8]",
-    text: "text-[#1D4ED8]",
-    soft: "bg-[#1D4ED8]/10",
-  },
-  {
-    key: "citas",
-    label: "Citas",
-    width: "w-[79%]",
-    clip: "[clip-path:polygon(0_0,100%_0,93%_100%,7%_100%)]",
-    bar: "bg-[#0EA5E9]",
-    dot: "bg-[#0EA5E9]",
-    text: "text-[#0284C7]",
-    soft: "bg-[#0EA5E9]/10",
-  },
-  {
-    key: "shows",
-    label: "Shows",
-    width: "w-[67%]",
-    clip: "[clip-path:polygon(0_0,100%_0,92%_100%,8%_100%)]",
-    bar: "bg-[#84CC16]",
-    dot: "bg-[#84CC16]",
-    text: "text-[#65A30D]",
-    soft: "bg-[#84CC16]/10",
-  },
-  {
-    key: "ventas",
-    label: "Ventas",
-    width: "w-[55%]",
-    clip: "[clip-path:polygon(0_0,100%_0,91%_100%,9%_100%)]",
-    bar: "bg-[#16A34A]",
-    dot: "bg-[#16A34A]",
-    text: "text-[#15803D]",
-    soft: "bg-[#16A34A]/10",
-  },
-];
-
 const format = (n) => new Intl.NumberFormat("es-MX").format(n);
 
 const rate = (part, whole) =>
@@ -60,8 +7,62 @@ export function DigitalFunnel({
   data,
   title = "Autos Nuevos",
   subtitle = "mes en curso",
+  department
 }) {
   if (!data) return null;
+
+  const STAGES = [
+    {
+      key: "leads",
+      label: "Leads",
+      width: "w-full",
+      clip: "[clip-path:polygon(0_0,100%_0,95%_100%,5%_100%)]",
+      bar: "bg-[#7C3AED]",
+      dot: "bg-[#7C3AED]",
+      text: "text-[#7C3AED]",
+      soft: "bg-[#7C3AED]/10",
+    },
+    {
+      key: department === "DIGITAL" ? "asignados" : "contactados",
+      label: "Asignados",
+      width: "w-[90%]",
+      clip: "[clip-path:polygon(0_0,100%_0,94%_100%,6%_100%)]",
+      bar: "bg-[#1D4ED8]",
+      dot: "bg-[#1D4ED8]",
+      text: "text-[#1D4ED8]",
+      soft: "bg-[#1D4ED8]/10",
+    },
+    {
+      key: "citas",
+      label: "Citas",
+      width: "w-[79%]",
+      clip: "[clip-path:polygon(0_0,100%_0,93%_100%,7%_100%)]",
+      bar: "bg-[#0EA5E9]",
+      dot: "bg-[#0EA5E9]",
+      text: "text-[#0284C7]",
+      soft: "bg-[#0EA5E9]/10",
+    },
+    {
+      key: "shows",
+      label: "Shows",
+      width: "w-[67%]",
+      clip: "[clip-path:polygon(0_0,100%_0,92%_100%,8%_100%)]",
+      bar: "bg-[#84CC16]",
+      dot: "bg-[#84CC16]",
+      text: "text-[#65A30D]",
+      soft: "bg-[#84CC16]/10",
+    },
+    {
+      key: "ventas",
+      label: "Ventas",
+      width: "w-[55%]",
+      clip: "[clip-path:polygon(0_0,100%_0,91%_100%,9%_100%)]",
+      bar: "bg-[#16A34A]",
+      dot: "bg-[#16A34A]",
+      text: "text-[#15803D]",
+      soft: "bg-[#16A34A]/10",
+    },
+  ];
 
   const top = data[STAGES[0].key] ?? 0;
   const bottom = data[STAGES[STAGES.length - 1].key] ?? 0;

@@ -83,13 +83,13 @@ export const CreateLeadModal = ({
         newSource: form.source || undefined,
         note: `Reingreso: ${form.interest || "nuevo interés"} vía ${form.source || "sin especificar"}`,
       });
-      onClose();
       if (ok) handleClose();
       return;
     }
     const dateISO = new Date(`${form.date}T12:00:00`).toISOString();
 
     const ok = await onCreate({ ...form, phone: cleanPhone, date: dateISO });
+    if (ok) handleClose();
     if (ok !== false) reset();
   };
 
@@ -101,7 +101,7 @@ export const CreateLeadModal = ({
             {duplicateWarning ? "Reingreso de Lead" : "Nuevo Lead"}
           </h3>
           <button onClick={handleClose}>
-            <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+            <X className="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
           </button>
         </div>
 
@@ -219,14 +219,14 @@ export const CreateLeadModal = ({
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={creating}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b] disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-brand text-white rounded-md hover:bg-[#e8543b] disabled:opacity-50 cursor-pointer"
             >
               {duplicateWarning && <ArrowRightCircle className="w-4 h-4" />}
               {creating

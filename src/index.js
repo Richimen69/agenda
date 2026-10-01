@@ -23,6 +23,7 @@ import serviceTypeRoutes from "./modules/live/service-type.routes.js";
 import liveSessionRoutes from "./modules/live/live-session.routes.js";
 import leadsRoutes from "./modules/leads/leads.routes.js";
 import supportRoutes from "./modules/support/support.routes.js"
+import knowledgeRoutes from './modules/knowledge/knowledge.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,8 @@ app.use("/api/live-sessions", liveSessionRoutes);
 
 // A partir de aquí, TODO /api requiere token válido
 app.use("/api", verifyToken);
+
+app.use('/api/knowledge', knowledgeRoutes);
 
 app.use("/api/users", userRoutes);
 app.use("/api/whatsapp", whatsappRoutes);

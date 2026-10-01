@@ -48,6 +48,7 @@ model User {
   supportComments        SupportComment[]  @relation("UserSupportComments")
   supportAuditLogs       SupportAuditLog[] @relation("UserSupportAudit")
   defaultCategories      SupportCategory[] @relation("CategoryDefaultTech")
+  uploadedDocuments      Document[]        @relation("UploadedDocuments")
 }
 
 // 2. TICKETS / PROYECTOS
@@ -299,13 +300,16 @@ model ProjectComment {
 }
 
 model Area {
-  id       String          @id @default(uuid())
-  name     String          @unique
-  parentId String?
-  parent   Area?           @relation("AreaHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children Area[]          @relation("AreaHierarchy")
-  members  ProjectMember[]
-  users    User[]          @relation("UserArea")
+  id                 String             @id @default(uuid())
+  name               String             @unique
+  parentId           String?
+  parent             Area?              @relation("AreaHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children           Area[]             @relation("AreaHierarchy")
+  members            ProjectMember[]
+  users              User[]             @relation("UserArea")
+  documentCategories DocumentCategory[] @relation("AreaDocumentCategories")
+  documents          Document[]         @relation("AreaDocuments")
+  icon               String?
 }
 
 // =========================================================
@@ -599,6 +603,7 @@ enum LeadStatus {
   ATENDIDO
   AGENDADO
   PERDIDO
+  ASIGNADO
 }
 
 enum RecoveryStatus {
@@ -677,4 +682,54 @@ enum KpiType {
   STATUS      @map("ESTADO")
   FINANCIAL   @map("FINANCIERO")
   MILESTONE   @map("HITO")
+}
+
+model DocumentCategory {
+  id          String  @id @default(uuid())
+  name        String // Ej. "Fichas Técnicas", "Manuales", "Formatos"
+  description String?
+
+  // Relación: Una categoría puede pertenecer a un área específica (ej. Ventas) o ser global si es nulo
+  areaId String?
+  area   Area?   @relation("AreaDocumentCategories", fields: [areaId], references: [id], onDelete: Cascade)
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  icon      String?
+
+  @@unique([name, areaId]) // Evita que existan dos categorías llamadas "Fichas" en la misma área
+}
+
+model Document {
+  id          String  @id @default(uuid())
+  title       String // Nombre amigable (Ej. "Ficha Técnica RAV4 2026")
+  description String? @db.Text
+
+  // Datos del archivo físico en Cloudflare R2
+  fileUrl  String @db.Text // URL pública o prefirmada para descargarlo
+  fileKey  String @unique // Identificador único en R2 (necesario para poder borrarlo de la nube después)
+  fileType String // Ej. "application/pdf", "video/mp4"
+  fileSize Int // Tamaño en bytes
+
+  // Imagen de portada para que el Dashboard se vea visualmente atractivo
+  thumbnailUrl String? @db.Text
+
+  // Relaciones
+  categoryId String
+  category   DocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  areaId String
+  area   Area   @relation("AreaDocuments", fields: [areaId], references: [id], onDelete: Cascade)
+
+  uploaderId String
+  uploader   User   @relation("UploadedDocuments", fields: [uploaderId], references: [id], onDelete: SetNull)
+
+  isActive  Boolean  @default(true) // Para ocultar documentos sin borrarlos de la base de datos (Soft delete)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([areaId])
+  @@index([categoryId])
 }
