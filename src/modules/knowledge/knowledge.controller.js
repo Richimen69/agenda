@@ -32,6 +32,7 @@ export const getUploadUrl = async (req, res) => {
 // ==========================================
 export const createDocument = async (req, res) => {
   try {
+    // 1. Ya NO extraemos uploaderId del req.body
     const {
       title,
       description,
@@ -42,8 +43,11 @@ export const createDocument = async (req, res) => {
       thumbnailUrl,
       categoryId,
       vehicleId,
-      uploaderId,
     } = req.body;
+
+    // 2. Tomamos el ID directamente del token verificado por tu middleware.
+    // (Asegúrate de que verifyToken guarda el usuario en req.user.id o req.userId)
+    const userId = req.user.id;
 
     const newDocument = await prisma.document.create({
       data: {
@@ -56,7 +60,7 @@ export const createDocument = async (req, res) => {
         thumbnailUrl,
         categoryId,
         vehicleId: vehicleId || null,
-        uploaderId,
+        uploaderId: userId, // <-- Usamos el ID seguro del token
       },
     });
     res.status(201).json(newDocument);
