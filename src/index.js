@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import prisma from '#config/prisma';
+import prisma from "#config/prisma";
 
 import "./jobs/queue.js";
 import "./jobs/cron.js";
@@ -22,8 +22,8 @@ import areaRoutes from "./modules/admin/area.routes.js";
 import serviceTypeRoutes from "./modules/live/service-type.routes.js";
 import liveSessionRoutes from "./modules/live/live-session.routes.js";
 import leadsRoutes from "./modules/leads/leads.routes.js";
-import supportRoutes from "./modules/support/support.routes.js"
-import knowledgeRoutes from './modules/knowledge/knowledge.routes.js';
+import supportRoutes from "./modules/support/support.routes.js";
+import knowledgeRoutes from "./modules/knowledge/knowledge.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,11 +39,10 @@ app.use("/api", authRoutes); // contiene /api/login y /api/me
 
 app.use("/api/service-types", serviceTypeRoutes);
 app.use("/api/live-sessions", liveSessionRoutes);
+app.use("/api/knowledge", knowledgeRoutes);
 
 // A partir de aquí, TODO /api requiere token válido
 app.use("/api", verifyToken);
-
-app.use('/api/knowledge', knowledgeRoutes);
 
 app.use("/api/users", userRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
@@ -56,7 +55,6 @@ app.use("/api/kpis", kpiRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/leads", leadsRoutes);
 app.use("/api/support", supportRoutes);
-
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
