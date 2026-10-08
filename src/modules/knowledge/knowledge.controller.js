@@ -45,10 +45,10 @@ export const createDocument = async (req, res) => {
       vehicleId,
     } = req.body;
 
-    // 2. Tomamos el ID directamente del token verificado por tu middleware.
-    // (Asegúrate de que verifyToken guarda el usuario en req.user.id o req.userId)
     const userId = req.user.id;
-
+    console.log("=== DEBUG UPLOADER ID ===");
+    console.log("ID del body:", req.body.uploaderId);
+    console.log("ID del token:", req.user?.id);
     const newDocument = await prisma.document.create({
       data: {
         title,
@@ -60,7 +60,7 @@ export const createDocument = async (req, res) => {
         thumbnailUrl,
         categoryId,
         vehicleId: vehicleId || null,
-        uploaderId: userId, // <-- Usamos el ID seguro del token
+        uploaderId: userId,
       },
     });
     res.status(201).json(newDocument);
