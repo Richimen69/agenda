@@ -306,7 +306,7 @@ export const searchKnowledge = async (req, res) => {
 };
 export const createVehicle = async (req, res) => {
   try {
-    const { name, description, coverUrl, engine, power, traction, categoryId } =
+    const { name, description, coverUrl, engine, power, traction, torque, categoryId } =
       req.body;
 
     const vehicle = await prisma.vehicle.create({
@@ -317,6 +317,7 @@ export const createVehicle = async (req, res) => {
         engine,
         power,
         traction,
+        torque,
         categoryId,
       },
     });
@@ -359,7 +360,7 @@ export const getVehiclesByCategory = async (req, res) => {
 export const updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, engine, power, traction, documentIds } = req.body;
+    const { name, engine, power, traction, torque, documentIds } = req.body;
 
     const vehicle = await prisma.vehicle.update({
       where: { id },
@@ -368,7 +369,7 @@ export const updateVehicle = async (req, res) => {
         engine,
         power,
         traction,
-        // Magia de Prisma: Desvincula los anteriores y vincula los nuevos IDs
+        torque,
         documents: {
           set: [], // Limpia las relaciones actuales
           connect: documentIds

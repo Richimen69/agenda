@@ -735,6 +735,7 @@ model Vehicle {
   engine   String? // Ej. "1.6L Turbo G16E-GTS"
   power    String? // Ej. "280 HP @ 6,500 rpm"
   traction String? // Ej. "Integral AWD GR-FOUR"
+  torque   String?
 
   // Relaciones
   categoryId String // A qué carpeta pertenece (Ej. "GR Sport")
