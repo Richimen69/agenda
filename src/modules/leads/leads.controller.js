@@ -341,20 +341,27 @@ export const reactivateLead = async (req, res) => {
   }
 };
 
-// Panel: Resultados por Campaña (solo leads generados, sin CPL por ahora)
 export const getCampaignResults = async (req, res) => {
-  const { month } = req.query; // ej. "2026-07"
+  const { month, department } = req.query; // Recibimos department
 
   try {
     const startDate = new Date(`${month}-01T00:00:00.000Z`);
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + 1);
 
+    // Filtro base con fechas
+    const baseWhere = { date: { gte: startDate, lt: endDate } };
+
+    // Si nos envían departamentos (NUEVOS,SEMINUEVOS), los agregamos al filtro
+    if (department) {
+      baseWhere.department = { in: department.split(",") };
+    }
+
     const leadsByCampaign = await prisma.lead.groupBy({
       by: ["source"],
-      where: { date: { gte: startDate, lt: endDate } },
+      where: baseWhere,
       _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
+      orderBy: { _count: { id: "desc" } }, 
     });
 
     const data = leadsByCampaign.map((c) => ({

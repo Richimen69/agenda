@@ -16,6 +16,7 @@ import {
   getLeadsCount,
   getRecoveryFunnel,
   getDigitalFunnel,
+  getInterestResults,
 } from "./kpi.controller.js";
 
 const router = Router();
@@ -25,6 +26,11 @@ router.get(
   "/recovery",
   requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"),
   getRecoveryLeads,
+);
+router.get(
+  "/dashboard/interests",
+  requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"),
+  getInterestResults,
 );
 router.post("/", requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"), createLead);
 router.put("/:id", requireModuleAccess("LEADS_ADMIN", "LEADS_AUX"), updateLead);

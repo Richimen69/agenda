@@ -18,6 +18,7 @@ import { sileo, Toaster } from "sileo";
 import ProjectDetailPage from "./modules/programas/pages/ProjectDetailPage";
 import SupportDashboard from "./modules/support/pages/SupportDashboard";
 import TicketDetail from "./modules/support/pages/TicketDetail";
+import {ExecutiveDashboardPage} from "./modules/leads/pages/ExecutiveDashboardPage";
 
 // NUEVAS IMPORTACIONES DEL MÓDULO LIVE
 import { AdminLive } from "@modules/live/pages/AdminLive";
@@ -173,7 +174,10 @@ export default function App() {
                 />
               }
             />
-            <Route path="/support/metrics" element={<SupportMetrics authUser={authUser}/>} />
+            <Route
+              path="/support/metrics"
+              element={<SupportMetrics authUser={authUser} />}
+            />
             <Route path="/support/categories" element={<SupportCategories />} />
             <Route
               path="leads"
@@ -200,6 +204,17 @@ export default function App() {
               }
             />
             <Route
+              path="dash"
+              element={
+                <ExecutiveDashboardPage
+                  events={events}
+                  authUser={authUser}
+                  users={users}
+                  onEventsChange={fetchData}
+                />
+              }
+            />
+            <Route
               path="proyectos"
               element={
                 <ProyectosPage
@@ -212,8 +227,14 @@ export default function App() {
                 />
               }
             />
-            <Route path="/support" element={<SupportDashboard authUser={authUser} users={users}/>} />
-            <Route path="/support/ticket/:id" element={<TicketDetail authUser={authUser}/>} />
+            <Route
+              path="/support"
+              element={<SupportDashboard authUser={authUser} users={users} />}
+            />
+            <Route
+              path="/support/ticket/:id"
+              element={<TicketDetail authUser={authUser} />}
+            />
 
             <Route
               path="admin"

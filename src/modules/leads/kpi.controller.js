@@ -258,6 +258,7 @@ export const getDigitalFunnel = async (req, res) => {
       asignados,
       ventas,
       ventasAmountResult,
+      contactTimeResult
     ] = await Promise.all([
       prisma.lead.count({ where: baseWhere }),
       prisma.lead.count({
@@ -281,6 +282,10 @@ export const getDigitalFunnel = async (req, res) => {
         _sum: { amount: true },
         where: { ...baseWhere, amount: { not: null, gt: 0 } },
       }),
+      prisma.lead.aggregate({
+        _avg: { firstContactTime: true },
+        where: { ...baseWhere, firstContactTime: { not: null } }
+      })
     ]);
 
     const calcPercent = (value) =>
@@ -305,6 +310,7 @@ export const getDigitalFunnel = async (req, res) => {
         citasPercent: calcPercent(citas),
         showsPercent: calcPercent(shows),
         ventasPercent: calcPercent(ventas),
+        avgContactTime: contactTimeResult._avg.firstContactTime || 0,
       },
     });
   } catch (error) {
@@ -312,5 +318,44 @@ export const getDigitalFunnel = async (req, res) => {
     res
       .status(500)
       .json({ success: false, error: "Error al obtener funnel digital" });
+  }
+};
+
+export const getInterestResults = async (req, res) => {
+  const { month, department } = req.query;
+
+  try {
+    const startDate = new Date(`${month}-01T00:00:00.000Z`);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const baseWhere = { 
+      date: { gte: startDate, lt: endDate },
+      interest: { not: null, not: "" } 
+    };
+
+    if (department) {
+      baseWhere.department = { in: department.split(',') };
+    }
+
+    const leadsByInterest = await prisma.lead.groupBy({
+      by: ["interest"],
+      where: baseWhere,
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+    });
+
+    const data = leadsByInterest.map((item) => ({
+      vehicle: item.interest,
+      leads: item._count.id,
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      error: "Error al obtener resultados por interés",
+    });
   }
 };

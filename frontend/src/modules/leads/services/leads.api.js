@@ -3,11 +3,11 @@ import { fetchJSON, API_URL } from "@core/http";
 export const getLeads = async (filters = {}) => {
   const { start, end, q } = filters;
   const params = new URLSearchParams();
-  
+
   if (q) params.append("q", q);
   if (start) params.append("start", start);
   if (end) params.append("end", end);
-  
+
   const queryString = params.toString() ? `?${params.toString()}` : "";
   return await fetchJSON(`${API_URL}/leads${queryString}`, "GET");
 };
@@ -43,8 +43,13 @@ export const addLeadComment = async (leadId, payload) => {
   );
 };
 
-export const getCampaignResults = async (month) =>
-  await fetchJSON(`${API_URL}/leads/dashboard/campaigns?month=${month}`, "GET");
+export const getCampaignResults = async (month, department) => {
+  const departmentParam = department ? `&department=${department}` : "";
+  return await fetchJSON(
+    `${API_URL}/leads/dashboard/campaigns?month=${month}${departmentParam}`,
+    "GET",
+  );
+};
 
 export const getRecoveryFunnel = async (month) =>
   await fetchJSON(`${API_URL}/leads/dashboard/recovery?month=${month}`, "GET");
@@ -72,6 +77,14 @@ export const getAmount = async (month, department) => {
 export const getLeadCount = async (month) => {
   return await fetchJSON(
     `${API_URL}/leads/kpi/leads-count?month=${month}`,
+    "GET",
+  );
+};
+
+export const getInterestResults = async (month, department) => {
+  const departmentParam = department ? `&department=${department}` : "";
+  return await fetchJSON(
+    `${API_URL}/leads/dashboard/interests?month=${month}${departmentParam}`,
     "GET",
   );
 };

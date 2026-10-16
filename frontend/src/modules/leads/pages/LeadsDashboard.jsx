@@ -1,14 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { BarChart3, Users } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useState, useEffect } from "react";
 import {
   getCampaignResults,
   getRecoveryFunnel,
@@ -19,7 +9,6 @@ import {
 import { RecoveryFunnel } from "../components/dashboard/RecoveryFunnel";
 import { DigitalFunnel } from "../components/dashboard/DigitalFunnel";
 import { CardAmount } from "../components/dashboard/CardAmount";
-import { CombinedFunnelChart } from "../components/dashboard/CombinedFunnelChart";
 import { ServiceFunnel } from "../components/dashboard/ServiceFunnel";
 import { PartsFunnel } from "../components/dashboard/PartsFunnel";
 
