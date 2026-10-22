@@ -32,7 +32,17 @@ export default function AgendaPage({
   hoy.setHours(0, 0, 0, 0);
 
   const eventosAMostrar = diaSeleccionado
-    ? events.filter((e) => e.scheduledAt.startsWith(diaSeleccionado.dateStr)) // 1. Muestra los del día seleccionado (pasados o futuros)
+    ? events.filter((e) => {
+        // 1. Muestra los del día seleccionado evaluando la hora local
+        const eventDate = new Date(e.scheduledAt);
+        const [year, month, day] = diaSeleccionado.dateStr.split("-");
+
+        return (
+          eventDate.getFullYear() === parseInt(year, 10) &&
+          eventDate.getMonth() === parseInt(month, 10) - 1 &&
+          eventDate.getDate() === parseInt(day, 10)
+        );
+      })
     : events.filter((e) => {
         // 2. Si no hay día seleccionado, muestra solo de hoy en adelante
         const fechaEvento = new Date(e.scheduledAt);
