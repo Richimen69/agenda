@@ -49,9 +49,19 @@ export default function AgendaCalendar({
   }
   // Días del mes actual
   for (let i = 1; i <= daysInMonth; i++) {
-    const dateStr = new Date(year, month, i).toISOString().split("T")[0];
-    // Filtrar eventos que caen en este día
-    const dayEvents = events.filter((e) => e.scheduledAt.startsWith(dateStr));
+    // Generar dateStr en formato YYYY-MM-DD respetando la zona horaria local
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+
+    // Convertir el string ISO a un objeto Date para evaluarlo en hora local
+    const dayEvents = events.filter((e) => {
+      const eventDate = new Date(e.scheduledAt);
+      return (
+        eventDate.getFullYear() === year &&
+        eventDate.getMonth() === month &&
+        eventDate.getDate() === i
+      );
+    });
+
     days.push({
       empty: false,
       day: i,
